@@ -98,11 +98,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-sidebar-accent">
-                <Building2 className="h-6 w-6 text-sidebar-primary" />
-              </div>
               <div>
-                <h1 className="font-bold text-lg">AssetTrack</h1>
+                <h1 className="font-bold text-lg">SINERGI</h1>
                 <p className="text-xs text-sidebar-foreground/70">Management System</p>
               </div>
             </div>
