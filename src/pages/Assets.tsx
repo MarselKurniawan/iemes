@@ -99,6 +99,13 @@ const Assets = () => {
   });
 
   const canManage = role === 'superadmin' || role === 'hotel_manager';
+  const isStaff = role === 'staff';
+  const [staffEditDialogOpen, setStaffEditDialogOpen] = useState(false);
+  const [staffEditAsset, setStaffEditAsset] = useState<Asset | null>(null);
+  const [staffFormData, setStaffFormData] = useState({
+    condition: 'baik' as AssetCondition,
+    status: 'aktif' as AssetStatus,
+  });
 
   // Filtered assets
   const filteredAssets = assets.filter(asset => {
@@ -224,19 +231,54 @@ const Assets = () => {
   };
 
   const openEditDialog = (asset: Asset) => {
-    setEditingAsset(asset);
-    setFormData({
-      name: asset.name,
-      is_movable: asset.is_movable,
-      location_id: asset.location_id || '',
-      category: asset.category,
-      brand: asset.brand || '',
-      series: asset.series || '',
-      purchase_price: asset.purchase_price?.toString() || '',
-      condition: asset.condition,
-      status: asset.status,
-    });
-    setDialogOpen(true);
+    if (isStaff) {
+      // Staff can only edit status
+      setStaffEditAsset(asset);
+      setStaffFormData({
+        condition: asset.condition,
+        status: asset.status,
+      });
+      setStaffEditDialogOpen(true);
+    } else {
+      setEditingAsset(asset);
+      setFormData({
+        name: asset.name,
+        is_movable: asset.is_movable,
+        location_id: asset.location_id || '',
+        category: asset.category,
+        brand: asset.brand || '',
+        series: asset.series || '',
+        purchase_price: asset.purchase_price?.toString() || '',
+        condition: asset.condition,
+        status: asset.status,
+      });
+      setDialogOpen(true);
+    }
+  };
+
+  const handleStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffEditAsset) return;
+    setSubmitting(true);
+
+    const { error } = await supabase
+      .from('assets')
+      .update({
+        condition: staffFormData.condition,
+        status: staffFormData.status,
+      })
+      .eq('id', staffEditAsset.id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Berhasil', description: 'Status aset diupdate' });
+      fetchAssets();
+      setStaffEditDialogOpen(false);
+    }
+
+    setSubmitting(false);
+    setStaffEditAsset(null);
   };
 
   const isMaintenanceSoon = (date: string | null) => {
@@ -501,6 +543,7 @@ const Assets = () => {
                     <TableHead>Kondisi</TableHead>
                     <TableHead>Status</TableHead>
                     {canManage && <TableHead className="w-20">Aksi</TableHead>}
+                    {isStaff && <TableHead className="w-16">Aksi</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -549,6 +592,13 @@ const Assets = () => {
                           </div>
                         </TableCell>
                       )}
+                      {isStaff && (
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(asset)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -556,6 +606,66 @@ const Assets = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Staff Edit Dialog */}
+        <Dialog open={staffEditDialogOpen} onOpenChange={(open) => { setStaffEditDialogOpen(open); if (!open) setStaffEditAsset(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Update Status Aset</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleStaffSubmit} className="space-y-4">
+              {staffEditAsset && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="font-medium">{staffEditAsset.name}</p>
+                  <p className="text-sm text-muted-foreground">{categoryLabels[staffEditAsset.category]}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Kondisi</Label>
+                <Select 
+                  value={staffFormData.condition} 
+                  onValueChange={(v) => setStaffFormData({ ...staffFormData, condition: v as AssetCondition })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(conditionLabels).map(([val, { label }]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select 
+                  value={staffFormData.status} 
+                  onValueChange={(v) => setStaffFormData({ ...staffFormData, status: v as AssetStatus })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(statusLabels).map(([val, { label }]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setStaffEditDialogOpen(false)} className="flex-1">
+                  Batal
+                </Button>
+                <Button type="submit" disabled={submitting} className="flex-1">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
