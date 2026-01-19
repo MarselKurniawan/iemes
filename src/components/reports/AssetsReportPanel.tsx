@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, FileText, Loader2 } from 'lucide-react';
+import { Download, FileText, Loader2, ChevronDown, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -49,6 +50,7 @@ export default function AssetsReportPanel(props: {
 
   const [exportLoading, setExportLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   const [assetLocationFilter, setAssetLocationFilter] = useState('all');
   const [assetCategoryFilter, setAssetCategoryFilter] = useState('all');
@@ -205,75 +207,88 @@ export default function AssetsReportPanel(props: {
         <CardTitle>Export Laporan Aset</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          {isSuperadmin && (
-            <div className="space-y-2">
-              <Label>Property</Label>
-              <Select value={assetPropertyFilter} onValueChange={(v) => setAssetPropertyFilter(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">Property Ini</SelectItem>
-                  <SelectItem value="all">Semua Property</SelectItem>
-                </SelectContent>
-              </Select>
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filter Data
+              </span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              {isSuperadmin && (
+                <div className="space-y-2">
+                  <Label>Property</Label>
+                  <Select value={assetPropertyFilter} onValueChange={(v) => setAssetPropertyFilter(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="current">Property Ini</SelectItem>
+                      <SelectItem value="all">Semua Property</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Lokasi</Label>
+                <Select value={assetLocationFilter} onValueChange={setAssetLocationFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Lokasi</SelectItem>
+                    {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Kategori</Label>
+                <Select value={assetCategoryFilter} onValueChange={setAssetCategoryFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Kategori</SelectItem>
+                    {Object.entries(categoryLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Kondisi</Label>
+                <Select value={assetConditionFilter} onValueChange={setAssetConditionFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Kondisi</SelectItem>
+                    {Object.entries(conditionLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={assetStatusFilter} onValueChange={setAssetStatusFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    {Object.entries(statusLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cari Nama Aset</Label>
+                <Input value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} placeholder="Contoh: AC, TV, ..." />
+              </div>
             </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Lokasi</Label>
-            <Select value={assetLocationFilter} onValueChange={setAssetLocationFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Lokasi</SelectItem>
-                {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Kategori</Label>
-            <Select value={assetCategoryFilter} onValueChange={setAssetCategoryFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kategori</SelectItem>
-                {Object.entries(categoryLabels).map(([val, label]) => (
-                  <SelectItem key={val} value={val}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Kondisi</Label>
-            <Select value={assetConditionFilter} onValueChange={setAssetConditionFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kondisi</SelectItem>
-                {Object.entries(conditionLabels).map(([val, label]) => (
-                  <SelectItem key={val} value={val}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={assetStatusFilter} onValueChange={setAssetStatusFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                {Object.entries(statusLabels).map(([val, label]) => (
-                  <SelectItem key={val} value={val}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Cari Nama Aset</Label>
-            <Input value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} placeholder="Contoh: AC, TV, ..." />
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <Button onClick={() => exportAssets('excel')} disabled={exportLoading}>
