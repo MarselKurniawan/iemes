@@ -34,6 +34,7 @@ const AdminUsers = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ email: '', full_name: '', login_code: '', role: 'staff' as AppRole });
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
+  const [createSelectedProperties, setCreateSelectedProperties] = useState<string[]>([]);
 
   const fetchData = async () => {
     const [profilesRes, propertiesRes, rolesRes, assignmentsRes] = await Promise.all([
@@ -80,10 +81,21 @@ const AdminUsers = () => {
 
     await supabase.from('user_roles').insert({ user_id: authData.user.id, role: formData.role });
 
+    // Assign properties (multi) for non-superadmin
+    if (formData.role !== 'superadmin') {
+      const unique = Array.from(new Set(createSelectedProperties));
+      if (unique.length > 0) {
+        await supabase.from('property_assignments').insert(
+          unique.map((pid) => ({ user_id: authData.user.id, property_id: pid })),
+        );
+      }
+    }
+
     toast({ title: 'Berhasil', description: 'User berhasil ditambahkan' });
     fetchData();
     setDialogOpen(false);
     setFormData({ email: '', full_name: '', login_code: '', role: 'staff' });
+    setCreateSelectedProperties([]);
     setSubmitting(false);
   };
 
@@ -134,7 +146,11 @@ const AdminUsers = () => {
                 <div className="space-y-2"><Label>Email *</Label><Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></div>
                 <div className="space-y-2"><Label>Kode Login *</Label><Input value={formData.login_code} onChange={(e) => setFormData({ ...formData, login_code: e.target.value })} required minLength={6} /></div>
                 <div className="space-y-2"><Label>Role *</Label>
-                  <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v as AppRole })}>
+                  <Select value={formData.role} onValueChange={(v) => {
+                    const nextRole = v as AppRole;
+                    setFormData({ ...formData, role: nextRole });
+                    if (nextRole === 'superadmin') setCreateSelectedProperties([]);
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="staff">Staff</SelectItem>
@@ -143,6 +159,32 @@ const AdminUsers = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.role !== 'superadmin' && (
+                  <div className="space-y-2">
+                    <Label>Assign Property (Multi)</Label>
+                    <div className="space-y-2 max-h-56 overflow-y-auto rounded-md border p-2">
+                      {properties.map(p => (
+                        <label key={p.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={createSelectedProperties.includes(p.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) setCreateSelectedProperties([...createSelectedProperties, p.id]);
+                              else setCreateSelectedProperties(createSelectedProperties.filter(id => id !== p.id));
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span>{p.name}</span>
+                        </label>
+                      ))}
+                      {properties.length === 0 && (
+                        <div className="p-2 text-sm text-muted-foreground">Belum ada property.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4"><Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Batal</Button><Button type="submit" disabled={submitting} className="flex-1">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}</Button></div>
               </form>
             </DialogContent>
