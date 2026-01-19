@@ -67,6 +67,7 @@ const Maintenance = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [staffEditDialogOpen, setStaffEditDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MaintenanceItem | null>(null);
   const [editingItem, setEditingItem] = useState<MaintenanceItem | null>(null);
@@ -93,7 +94,9 @@ const Maintenance = () => {
     location_id: '',
   });
 
+  const canManage = role === 'superadmin' || role === 'hotel_manager';
   const canDelete = role === 'superadmin' || role === 'hotel_manager';
+  const isStaff = role === 'staff';
 
   // Filtered items
   const filteredItems = items.filter(item => {
@@ -262,7 +265,43 @@ const Maintenance = () => {
       location_id: item.location_id || '',
     });
     setEvidenceFiles(item.evidence_urls || []);
-    setDialogOpen(true);
+    
+    // Staff uses separate dialog with limited fields
+    if (isStaff) {
+      setStaffEditDialogOpen(true);
+    } else {
+      setDialogOpen(true);
+    }
+  };
+
+  const handleStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    setSubmitting(true);
+
+    // Staff can only update: status, start_date, end_date, evidence_urls
+    const payload = {
+      status: formData.status,
+      start_date: formData.start_date,
+      end_date: formData.end_date || null,
+      evidence_urls: evidenceFiles.length > 0 ? evidenceFiles : null,
+    };
+
+    const { error } = await supabase
+      .from('maintenance')
+      .update(payload)
+      .eq('id', editingItem.id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Berhasil', description: 'Data maintenance diupdate' });
+      fetchData();
+      setStaffEditDialogOpen(false);
+    }
+
+    setSubmitting(false);
+    resetForm();
   };
 
   const openDetailDialog = (item: MaintenanceItem) => {
@@ -290,13 +329,14 @@ const Maintenance = () => {
               Kelola maintenance dan perbaikan
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Maintenance
-              </Button>
-            </DialogTrigger>
+          {canManage && (
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Maintenance
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -482,6 +522,7 @@ const Maintenance = () => {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         {/* Search and Filters */}
@@ -683,6 +724,113 @@ const Maintenance = () => {
                 )}
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Staff Edit Dialog - Limited Fields */}
+        <Dialog open={staffEditDialogOpen} onOpenChange={(open) => { setStaffEditDialogOpen(open); if (!open) resetForm(); }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Update Status Maintenance</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleStaffSubmit} className="space-y-4">
+              {editingItem && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="font-medium">{editingItem.title}</p>
+                  <p className="text-sm text-muted-foreground">{typeLabels[editingItem.type]}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Status *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v) => setFormData({ ...formData, status: v as MaintenanceStatus })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(statusLabels).map(([val, { label }]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Tanggal Mulai *</Label>
+                  <Input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tanggal Selesai</Label>
+                  <Input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Evidence</Label>
+                <div className="border-2 border-dashed rounded-lg p-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="staff-evidence-upload"
+                    disabled={uploading}
+                  />
+                  <label
+                    htmlFor="staff-evidence-upload"
+                    className="flex flex-col items-center cursor-pointer"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <span className="text-sm text-muted-foreground">Klik untuk upload foto</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+                {evidenceFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {evidenceFiles.map((url, idx) => (
+                      <div key={idx} className="relative group">
+                        <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
+                        <button
+                          type="button"
+                          onClick={() => removeEvidence(idx)}
+                          className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setStaffEditDialogOpen(false)} className="flex-1">
+                  Batal
+                </Button>
+                <Button type="submit" disabled={submitting} className="flex-1">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

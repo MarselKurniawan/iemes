@@ -194,6 +194,7 @@ const Locations = () => {
                         <SelectItem value="kamar">Kamar</SelectItem>
                         <SelectItem value="fasilitas_umum">Fasilitas Umum</SelectItem>
                         <SelectItem value="office">Office</SelectItem>
+                        <SelectItem value="warehouse">Gudang</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
