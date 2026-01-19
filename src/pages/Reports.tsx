@@ -52,7 +52,13 @@ const Reports = () => {
       return;
     }
 
-    const rows = (data || []).map(a => ({
+    if (!data || data.length === 0) {
+      toast({ title: 'Info', description: 'Tidak ada data aset untuk di-export', variant: 'default' });
+      setLoading(false);
+      return;
+    }
+
+    const rows = data.map(a => ({
       Nama: a.name,
       Kategori: a.category,
       Lokasi: a.locations?.name || (a.is_movable ? 'Bergerak' : '-'),
@@ -71,7 +77,9 @@ const Reports = () => {
     } else {
       const doc = new jsPDF();
       doc.text(`Laporan Aset - ${selectedProperty?.name || ''}`, 14, 15);
-      autoTable(doc, { head: [Object.keys(rows[0] || {})], body: rows.map(r => Object.values(r)), startY: 25 });
+      const headers = Object.keys(rows[0]);
+      const bodyData = rows.map(r => Object.values(r));
+      autoTable(doc, { head: [headers], body: bodyData, startY: 25 });
       doc.save(`assets_${selectedProperty?.name || 'report'}.pdf`);
     }
 
@@ -94,7 +102,13 @@ const Reports = () => {
       return;
     }
 
-    const rows = (data || []).map(m => ({
+    if (!data || data.length === 0) {
+      toast({ title: 'Info', description: 'Tidak ada data maintenance untuk di-export', variant: 'default' });
+      setLoading(false);
+      return;
+    }
+
+    const rows = data.map(m => ({
       Judul: m.title,
       Tipe: m.type,
       Target: m.assets?.name || m.locations?.name || '-',
@@ -113,7 +127,9 @@ const Reports = () => {
     } else {
       const doc = new jsPDF();
       doc.text(`Laporan Maintenance - ${selectedProperty?.name || ''}`, 14, 15);
-      autoTable(doc, { head: [Object.keys(rows[0] || {})], body: rows.map(r => Object.values(r)), startY: 25 });
+      const headers = Object.keys(rows[0]);
+      const bodyData = rows.map(r => Object.values(r));
+      autoTable(doc, { head: [headers], body: bodyData, startY: 25 });
       doc.save(`maintenance_${selectedProperty?.name || 'report'}.pdf`);
     }
 

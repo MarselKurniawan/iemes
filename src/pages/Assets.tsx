@@ -14,7 +14,7 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Package, Edit, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, Package, Edit, Trash2, Loader2, AlertTriangle, Search, Filter } from 'lucide-react';
 
 type AssetCategory = 'peralatan_kamar' | 'peralatan_dapur' | 'mesin_laundry_housekeeping' | 'kendaraan_operasional' | 'peralatan_kantor_it' | 'peralatan_rekreasi_leisure' | 'infrastruktur';
 type AssetCondition = 'baik' | 'cukup' | 'perlu_perbaikan' | 'rusak';
@@ -77,6 +77,13 @@ const Assets = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterCondition, setFilterCondition] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterLocation, setFilterLocation] = useState<string>('all');
+
   const [formData, setFormData] = useState({
     name: '',
     is_movable: false,
@@ -90,6 +97,20 @@ const Assets = () => {
   });
 
   const canManage = role === 'superadmin' || role === 'hotel_manager';
+
+  // Filtered assets
+  const filteredAssets = assets.filter(asset => {
+    const matchesSearch = asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (asset.brand && asset.brand.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (asset.series && asset.series.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = filterCategory === 'all' || asset.category === filterCategory;
+    const matchesCondition = filterCondition === 'all' || asset.condition === filterCondition;
+    const matchesStatus = filterStatus === 'all' || asset.status === filterStatus;
+    const matchesLocation = filterLocation === 'all' || 
+      (filterLocation === 'movable' && asset.is_movable) ||
+      (asset.location_id === filterLocation);
+    return matchesSearch && matchesCategory && matchesCondition && matchesStatus && matchesLocation;
+  });
 
   useEffect(() => {
     const property = properties.find(p => p.id === propertyId);
@@ -392,13 +413,77 @@ const Assets = () => {
           )}
         </div>
 
-        {assets.length === 0 ? (
+        {/* Search and Filters */}
+        <Card className="p-4">
+          <div className="flex flex-col gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari aset..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Kategori</SelectItem>
+                  {Object.entries(categoryLabels).map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterCondition} onValueChange={setFilterCondition}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Kondisi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Kondisi</SelectItem>
+                  {Object.entries(conditionLabels).map(([val, { label }]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  {Object.entries(statusLabels).map(([val, { label }]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterLocation} onValueChange={setFilterLocation}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Lokasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Lokasi</SelectItem>
+                  <SelectItem value="movable">Bergerak</SelectItem>
+                  {locations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Card>
+
+        {filteredAssets.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Package className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Belum ada aset</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {assets.length === 0 ? 'Belum ada aset' : 'Tidak ada aset yang cocok'}
+              </h3>
               <p className="text-muted-foreground text-center max-w-sm">
-                Tambahkan aset untuk mulai tracking
+                {assets.length === 0 ? 'Tambahkan aset untuk mulai tracking' : 'Coba ubah filter pencarian'}
               </p>
             </CardContent>
           </Card>
@@ -417,7 +502,7 @@ const Assets = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assets.map((asset) => (
+                  {filteredAssets.map((asset) => (
                     <TableRow key={asset.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">

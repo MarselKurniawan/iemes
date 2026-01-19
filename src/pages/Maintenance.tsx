@@ -14,7 +14,7 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Wrench, Edit, Trash2, Loader2, Eye, Upload, X, Image } from 'lucide-react';
+import { Plus, Wrench, Edit, Trash2, Loader2, Eye, Upload, X, Image, Search, Filter } from 'lucide-react';
 
 type MaintenanceType = 'renovasi_lokasi' | 'perbaikan_aset';
 type MaintenanceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
@@ -74,6 +74,13 @@ const Maintenance = () => {
   const [uploading, setUploading] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
 
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
   const [formData, setFormData] = useState({
     title: '',
     type: 'perbaikan_aset' as MaintenanceType,
@@ -87,6 +94,17 @@ const Maintenance = () => {
   });
 
   const canDelete = role === 'superadmin' || role === 'hotel_manager';
+
+  // Filtered items
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesType = filterType === 'all' || item.type === filterType;
+    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
+    const matchesDateFrom = !filterDateFrom || item.start_date >= filterDateFrom;
+    const matchesDateTo = !filterDateTo || item.start_date <= filterDateTo;
+    return matchesSearch && matchesType && matchesStatus && matchesDateFrom && matchesDateTo;
+  });
 
   useEffect(() => {
     const property = properties.find(p => p.id === propertyId);
@@ -466,13 +484,72 @@ const Maintenance = () => {
           </Dialog>
         </div>
 
-        {items.length === 0 ? (
+        {/* Search and Filters */}
+        <Card className="p-4">
+          <div className="flex flex-col gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari maintenance..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Tipe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Tipe</SelectItem>
+                  {Object.entries(typeLabels).map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  {Object.entries(statusLabels).map(([val, { label }]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground whitespace-nowrap">Dari:</Label>
+                <Input
+                  type="date"
+                  value={filterDateFrom}
+                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                  className="w-36"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground whitespace-nowrap">Sampai:</Label>
+                <Input
+                  type="date"
+                  value={filterDateTo}
+                  onChange={(e) => setFilterDateTo(e.target.value)}
+                  className="w-36"
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {filteredItems.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Wrench className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Belum ada maintenance</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {items.length === 0 ? 'Belum ada maintenance' : 'Tidak ada data yang cocok'}
+              </h3>
               <p className="text-muted-foreground text-center max-w-sm">
-                Tambahkan data maintenance untuk tracking perbaikan
+                {items.length === 0 ? 'Tambahkan data maintenance untuk tracking perbaikan' : 'Coba ubah filter pencarian'}
               </p>
             </CardContent>
           </Card>
@@ -492,7 +569,7 @@ const Maintenance = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((item) => (
+                  {filteredItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.title}</TableCell>
                       <TableCell>{typeLabels[item.type]}</TableCell>
