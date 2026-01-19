@@ -328,9 +328,11 @@ export type Database = {
         | "peralatan_kantor_it"
         | "peralatan_rekreasi_leisure"
         | "infrastruktur"
+        | "elektronik"
+        | "perabot"
       asset_condition: "baik" | "cukup" | "perlu_perbaikan" | "rusak"
       asset_status: "aktif" | "dalam_perbaikan" | "tidak_aktif" | "dihapuskan"
-      location_type: "kamar" | "fasilitas_umum" | "office"
+      location_type: "kamar" | "fasilitas_umum" | "office" | "warehouse"
       maintenance_status: "pending" | "in_progress" | "completed" | "cancelled"
       maintenance_type: "renovasi_lokasi" | "perbaikan_aset"
     }
@@ -469,10 +471,12 @@ export const Constants = {
         "peralatan_kantor_it",
         "peralatan_rekreasi_leisure",
         "infrastruktur",
+        "elektronik",
+        "perabot",
       ],
       asset_condition: ["baik", "cukup", "perlu_perbaikan", "rusak"],
       asset_status: ["aktif", "dalam_perbaikan", "tidak_aktif", "dihapuskan"],
-      location_type: ["kamar", "fasilitas_umum", "office"],
+      location_type: ["kamar", "fasilitas_umum", "office", "warehouse"],
       maintenance_status: ["pending", "in_progress", "completed", "cancelled"],
       maintenance_type: ["renovasi_lokasi", "perbaikan_aset"],
     },
