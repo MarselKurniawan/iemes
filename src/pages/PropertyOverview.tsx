@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProperty } from '@/contexts/PropertyContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Building2, MapPin, Package, Wrench, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Stats {
   totalLocations: number;
@@ -15,6 +16,61 @@ interface Stats {
   upcomingMaintenance: number;
 }
 
+interface AssetByCondition {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface AssetByCategory {
+  name: string;
+  count: number;
+}
+
+interface MaintenanceByStatus {
+  name: string;
+  value: number;
+  color: string;
+}
+
+const conditionColors: Record<string, string> = {
+  baik: '#22c55e',
+  cukup: '#3b82f6',
+  perlu_perbaikan: '#f59e0b',
+  rusak: '#ef4444',
+};
+
+const conditionLabels: Record<string, string> = {
+  baik: 'Baik',
+  cukup: 'Cukup',
+  perlu_perbaikan: 'Perlu Perbaikan',
+  rusak: 'Rusak',
+};
+
+const categoryLabels: Record<string, string> = {
+  peralatan_kamar: 'Peralatan Kamar',
+  peralatan_dapur: 'Peralatan Dapur',
+  mesin_laundry_housekeeping: 'Laundry & HK',
+  kendaraan_operasional: 'Kendaraan',
+  peralatan_kantor_it: 'Kantor & IT',
+  peralatan_rekreasi_leisure: 'Rekreasi',
+  infrastruktur: 'Infrastruktur',
+};
+
+const statusColors: Record<string, string> = {
+  pending: '#f59e0b',
+  in_progress: '#3b82f6',
+  completed: '#22c55e',
+  cancelled: '#6b7280',
+};
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending',
+  in_progress: 'Dalam Proses',
+  completed: 'Selesai',
+  cancelled: 'Dibatalkan',
+};
+
 const PropertyOverview = () => {
   const { propertyId } = useParams();
   const { properties, setSelectedProperty, selectedProperty } = useProperty();
@@ -22,6 +78,9 @@ const PropertyOverview = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentMaintenance, setRecentMaintenance] = useState<any[]>([]);
+  const [assetsByCondition, setAssetsByCondition] = useState<AssetByCondition[]>([]);
+  const [assetsByCategory, setAssetsByCategory] = useState<AssetByCategory[]>([]);
+  const [maintenanceByStatus, setMaintenanceByStatus] = useState<MaintenanceByStatus[]>([]);
 
   useEffect(() => {
     const property = properties.find(p => p.id === propertyId);
@@ -36,18 +95,22 @@ const PropertyOverview = () => {
     const fetchStats = async () => {
       if (!propertyId) return;
 
-      const [locationsRes, assetsRes, maintenanceRes] = await Promise.all([
+      const [locationsRes, assetsRes, maintenanceRes, allMaintenanceRes] = await Promise.all([
         supabase.from('locations').select('id', { count: 'exact' }).eq('property_id', propertyId),
-        supabase.from('assets').select('id, next_maintenance_date', { count: 'exact' }).eq('property_id', propertyId),
+        supabase.from('assets').select('id, condition, category, next_maintenance_date').eq('property_id', propertyId),
         supabase.from('maintenance').select('*').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(5),
+        supabase.from('maintenance').select('status').eq('property_id', propertyId),
       ]);
+
+      const assets = assetsRes.data || [];
+      const allMaintenance = allMaintenanceRes.data || [];
 
       const pendingCount = maintenanceRes.data?.filter(m => m.status === 'pending' || m.status === 'in_progress').length || 0;
       
       // Check assets with upcoming maintenance (within 30 days)
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      const upcomingCount = assetsRes.data?.filter(a => {
+      const upcomingCount = assets.filter(a => {
         if (!a.next_maintenance_date) return false;
         const nextDate = new Date(a.next_maintenance_date);
         return nextDate <= thirtyDaysFromNow && nextDate >= new Date();
@@ -55,11 +118,49 @@ const PropertyOverview = () => {
 
       setStats({
         totalLocations: locationsRes.count || 0,
-        totalAssets: assetsRes.count || 0,
-        totalMaintenance: maintenanceRes.data?.length || 0,
+        totalAssets: assets.length,
+        totalMaintenance: allMaintenance.length,
         pendingMaintenance: pendingCount,
         upcomingMaintenance: upcomingCount,
       });
+
+      // Calculate assets by condition
+      const conditionCounts: Record<string, number> = {};
+      assets.forEach(a => {
+        conditionCounts[a.condition] = (conditionCounts[a.condition] || 0) + 1;
+      });
+      setAssetsByCondition(
+        Object.entries(conditionCounts).map(([key, value]) => ({
+          name: conditionLabels[key] || key,
+          value,
+          color: conditionColors[key] || '#6b7280',
+        }))
+      );
+
+      // Calculate assets by category
+      const categoryCounts: Record<string, number> = {};
+      assets.forEach(a => {
+        categoryCounts[a.category] = (categoryCounts[a.category] || 0) + 1;
+      });
+      setAssetsByCategory(
+        Object.entries(categoryCounts).map(([key, count]) => ({
+          name: categoryLabels[key] || key,
+          count,
+        }))
+      );
+
+      // Calculate maintenance by status
+      const maintenanceStatusCounts: Record<string, number> = {};
+      allMaintenance.forEach(m => {
+        maintenanceStatusCounts[m.status] = (maintenanceStatusCounts[m.status] || 0) + 1;
+      });
+      setMaintenanceByStatus(
+        Object.entries(maintenanceStatusCounts).map(([key, value]) => ({
+          name: statusLabels[key] || key,
+          value,
+          color: statusColors[key] || '#6b7280',
+        }))
+      );
 
       setRecentMaintenance(maintenanceRes.data || []);
       setLoading(false);
@@ -147,6 +248,103 @@ const PropertyOverview = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Analytics Charts */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Assets by Condition */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Aset Berdasarkan Kondisi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {assetsByCondition.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={assetsByCondition}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                      labelLine={false}
+                    >
+                      {assetsByCondition.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                  Belum ada data
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Assets by Category */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Aset Berdasarkan Kategori</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {assetsByCategory.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={assetsByCategory} layout="vertical" margin={{ left: 20, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                  Belum ada data
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Maintenance by Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Maintenance Berdasarkan Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {maintenanceByStatus.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={maintenanceByStatus}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                      labelLine={false}
+                    >
+                      {maintenanceByStatus.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                  Belum ada data
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
