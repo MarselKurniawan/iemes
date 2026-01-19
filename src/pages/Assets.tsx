@@ -16,7 +16,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Package, Edit, Trash2, Loader2, AlertTriangle, Search, Filter } from 'lucide-react';
 
-type AssetCategory = 'peralatan_kamar' | 'peralatan_dapur' | 'mesin_laundry_housekeeping' | 'kendaraan_operasional' | 'peralatan_kantor_it' | 'peralatan_rekreasi_leisure' | 'infrastruktur';
+type AssetCategory = 'peralatan_kamar' | 'peralatan_dapur' | 'mesin_laundry_housekeeping' | 'kendaraan_operasional' | 'peralatan_kantor_it' | 'peralatan_rekreasi_leisure' | 'infrastruktur' | 'elektronik' | 'perabot';
 type AssetCondition = 'baik' | 'cukup' | 'perlu_perbaikan' | 'rusak';
 type AssetStatus = 'aktif' | 'dalam_perbaikan' | 'tidak_aktif' | 'dihapuskan';
 
@@ -49,6 +49,8 @@ const categoryLabels: Record<AssetCategory, string> = {
   peralatan_kantor_it: 'Peralatan Kantor & IT',
   peralatan_rekreasi_leisure: 'Peralatan Rekreasi & Leisure',
   infrastruktur: 'Infrastruktur',
+  elektronik: 'Elektronik',
+  perabot: 'Perabot',
 };
 
 const conditionLabels: Record<AssetCondition, { label: string; class: string }> = {
