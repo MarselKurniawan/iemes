@@ -32,30 +32,48 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
+    // Wait for role to be loaded
+    if (role === null) {
+      return;
+    }
+
     setLoading(true);
     
-    if (role === 'superadmin') {
-      const { data } = await supabase
-        .from('properties')
-        .select('*')
-        .order('name');
-      setProperties(data || []);
-    } else {
-      const { data } = await supabase
-        .from('property_assignments')
-        .select('property:properties(*)')
-        .eq('user_id', user.id);
-      
-      const props = data?.map(d => d.property).filter(Boolean) as Property[] || [];
-      setProperties(props);
+    try {
+      if (role === 'superadmin') {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('*')
+          .order('name');
+        if (error) {
+          console.error('Error fetching properties:', error);
+        }
+        setProperties(data || []);
+      } else {
+        const { data, error } = await supabase
+          .from('property_assignments')
+          .select('property:properties(*)')
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error('Error fetching property assignments:', error);
+        }
+        const props = data?.map(d => d.property).filter(Boolean) as Property[] || [];
+        setProperties(props);
+      }
+    } catch (err) {
+      console.error('Error in fetchProperties:', err);
     }
     
     setLoading(false);
   };
 
   useEffect(() => {
-    if (user && role) {
+    if (user && role !== null) {
       fetchProperties();
+    } else if (!user) {
+      setProperties([]);
+      setLoading(false);
     }
   }, [user, role]);
 
