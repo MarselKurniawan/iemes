@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, FileText, Loader2 } from 'lucide-react';
+import { Download, FileText, Loader2, ChevronDown, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -48,6 +49,7 @@ export default function MaintenanceReportPanel(props: {
 
   const [exportLoading, setExportLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   const [maintLocationFilter, setMaintLocationFilter] = useState('all');
   const [maintAssetFilter, setMaintAssetFilter] = useState('all');
@@ -220,83 +222,96 @@ export default function MaintenanceReportPanel(props: {
         <CardTitle>Export Laporan Maintenance</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {isSuperadmin && (
-            <div className="space-y-2">
-              <Label>Property</Label>
-              <Select value={maintPropertyFilter} onValueChange={(v) => setMaintPropertyFilter(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">Property Ini</SelectItem>
-                  <SelectItem value="all">Semua Property</SelectItem>
-                </SelectContent>
-              </Select>
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filter Data
+              </span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {isSuperadmin && (
+                <div className="space-y-2">
+                  <Label>Property</Label>
+                  <Select value={maintPropertyFilter} onValueChange={(v) => setMaintPropertyFilter(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="current">Property Ini</SelectItem>
+                      <SelectItem value="all">Semua Property</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Lokasi</Label>
+                <Select value={maintLocationFilter} onValueChange={setMaintLocationFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Lokasi</SelectItem>
+                    {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Asset</Label>
+                <Select value={maintAssetFilter} onValueChange={setMaintAssetFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Asset</SelectItem>
+                    {assets.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipe</Label>
+                <Select value={maintTypeFilter} onValueChange={setMaintTypeFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Tipe</SelectItem>
+                    {Object.entries(typeLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={maintStatusFilter} onValueChange={setMaintStatusFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    {Object.entries(maintenanceStatusLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Dari Tanggal</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Sampai Tanggal</Label>
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>Cari Judul Maintenance</Label>
+                <Input value={titleSearch} onChange={(e) => setTitleSearch(e.target.value)} placeholder="Contoh: perbaikan AC, renovasi lobby, ..." />
+              </div>
             </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Lokasi</Label>
-            <Select value={maintLocationFilter} onValueChange={setMaintLocationFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Lokasi</SelectItem>
-                {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Asset</Label>
-            <Select value={maintAssetFilter} onValueChange={setMaintAssetFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Asset</SelectItem>
-                {assets.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tipe</Label>
-            <Select value={maintTypeFilter} onValueChange={setMaintTypeFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Tipe</SelectItem>
-                {Object.entries(typeLabels).map(([val, label]) => (
-                  <SelectItem key={val} value={val}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={maintStatusFilter} onValueChange={setMaintStatusFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                {Object.entries(maintenanceStatusLabels).map(([val, label]) => (
-                  <SelectItem key={val} value={val}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Dari Tanggal</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Sampai Tanggal</Label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label>Cari Judul Maintenance</Label>
-            <Input value={titleSearch} onChange={(e) => setTitleSearch(e.target.value)} placeholder="Contoh: perbaikan AC, renovasi lobby, ..." />
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <Button onClick={() => exportMaintenance('excel')} disabled={exportLoading}>
