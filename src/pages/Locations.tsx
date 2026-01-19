@@ -14,7 +14,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, MapPin, Edit, Trash2, Loader2, Building, Hotel, Briefcase } from 'lucide-react';
 
-type LocationType = 'kamar' | 'fasilitas_umum' | 'office';
+type LocationType = 'kamar' | 'fasilitas_umum' | 'office' | 'warehouse';
 
 interface Location {
   id: string;
@@ -27,6 +27,7 @@ const locationTypeLabels: Record<LocationType, { label: string; icon: any }> = {
   kamar: { label: 'Kamar', icon: Hotel },
   fasilitas_umum: { label: 'Fasilitas Umum', icon: Building },
   office: { label: 'Office', icon: Briefcase },
+  warehouse: { label: 'Gudang', icon: Building },
 };
 
 const Locations = () => {
