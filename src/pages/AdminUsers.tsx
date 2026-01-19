@@ -61,41 +61,43 @@ const AdminUsers = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: formData.email.toLowerCase(),
-      password: formData.login_code,
-    });
+    try {
+      // Use edge function to create user without auto-login
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
 
-    if (authError || !authData.user) {
-      toast({ title: 'Error', description: authError?.message || 'Gagal membuat user', variant: 'destructive' });
-      setSubmitting(false);
-      return;
-    }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          login_code: formData.login_code,
+          full_name: formData.full_name,
+          role: formData.role,
+          property_ids: formData.role !== 'superadmin' ? createSelectedProperties : [],
+        }),
+      });
 
-    await supabase.from('profiles').insert({
-      user_id: authData.user.id,
-      email: formData.email.toLowerCase(),
-      full_name: formData.full_name,
-      login_code: formData.login_code,
-    });
+      const result = await response.json();
 
-    await supabase.from('user_roles').insert({ user_id: authData.user.id, role: formData.role });
-
-    // Assign properties (multi) for non-superadmin
-    if (formData.role !== 'superadmin') {
-      const unique = Array.from(new Set(createSelectedProperties));
-      if (unique.length > 0) {
-        await supabase.from('property_assignments').insert(
-          unique.map((pid) => ({ user_id: authData.user.id, property_id: pid })),
-        );
+      if (!response.ok) {
+        toast({ title: 'Error', description: result.error || 'Gagal membuat user', variant: 'destructive' });
+        setSubmitting(false);
+        return;
       }
+
+      toast({ title: 'Berhasil', description: 'User berhasil ditambahkan' });
+      fetchData();
+      setDialogOpen(false);
+      setFormData({ email: '', full_name: '', login_code: '', role: 'staff' });
+      setCreateSelectedProperties([]);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Gagal membuat user', variant: 'destructive' });
     }
 
-    toast({ title: 'Berhasil', description: 'User berhasil ditambahkan' });
-    fetchData();
-    setDialogOpen(false);
-    setFormData({ email: '', full_name: '', login_code: '', role: 'staff' });
-    setCreateSelectedProperties([]);
     setSubmitting(false);
   };
 
