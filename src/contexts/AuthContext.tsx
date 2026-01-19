@@ -20,34 +20,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    if (data) {
-      setRole(data.role as AppRole);
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching role:', error);
+        setRole(null);
+        return;
+      }
+      
+      if (data) {
+        setRole(data.role as AppRole);
+      } else {
+        setRole(null);
+      }
+    } catch (err) {
+      console.error('Error in fetchRole:', err);
+      setRole(null);
     }
   };
 
   useEffect(() => {
+    // Set up auth state change listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchRole(session.user.id);
+          // Use setTimeout to avoid Supabase deadlock
+          setTimeout(() => fetchRole(session.user.id), 0);
         } else {
           setRole(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Then get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRole(session.user.id);
+        await fetchRole(session.user.id);
       }
       setLoading(false);
     });
