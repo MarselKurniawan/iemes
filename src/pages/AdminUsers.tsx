@@ -127,9 +127,32 @@ const AdminUsers = () => {
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Hapus user ini?')) return;
-    await supabase.from('profiles').delete().eq('user_id', userId);
-    toast({ title: 'Berhasil', description: 'User dihapus' });
-    fetchData();
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast({ title: 'Error', description: result.error || 'Gagal hapus user', variant: 'destructive' });
+        return;
+      }
+
+      toast({ title: 'Berhasil', description: 'User dihapus' });
+      fetchData();
+    } catch {
+      toast({ title: 'Error', description: 'Gagal hapus user', variant: 'destructive' });
+    }
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-[60vh]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></DashboardLayout>;
