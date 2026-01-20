@@ -14,7 +14,7 @@ import { Plus, Users, Edit, Trash2, Loader2, Building2 } from 'lucide-react';
 
 type AppRole = 'superadmin' | 'hotel_manager' | 'staff';
 
-interface User { id: string; email: string; full_name: string; user_id: string; role?: AppRole; properties?: string[]; }
+interface User { id: string; email: string; full_name: string; user_id: string; login_code: string; role?: AppRole; properties?: string[]; }
 interface Property { id: string; name: string; }
 
 const roleLabels: Record<AppRole, { label: string; class: string }> = {
@@ -29,12 +29,15 @@ const AdminUsers = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ email: '', full_name: '', login_code: '', role: 'staff' as AppRole });
+  const [editFormData, setEditFormData] = useState({ full_name: '', login_code: '', role: 'staff' as AppRole });
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [createSelectedProperties, setCreateSelectedProperties] = useState<string[]>([]);
+  const [editSelectedProperties, setEditSelectedProperties] = useState<string[]>([]);
 
   const fetchData = async () => {
     const [profilesRes, propertiesRes, rolesRes, assignmentsRes] = await Promise.all([
@@ -47,7 +50,7 @@ const AdminUsers = () => {
     const usersData = (profilesRes.data || []).map(p => {
       const role = rolesRes.data?.find(r => r.user_id === p.user_id)?.role as AppRole | undefined;
       const props = assignmentsRes.data?.filter(a => a.user_id === p.user_id).map(a => a.property_id) || [];
-      return { ...p, role, properties: props };
+      return { id: p.id, email: p.email, full_name: p.full_name, user_id: p.user_id, login_code: p.login_code, role, properties: props };
     });
 
     setUsers(usersData);
@@ -123,6 +126,61 @@ const AdminUsers = () => {
     setSelectedUser(user);
     setSelectedProperties(user.properties || []);
     setAssignDialogOpen(true);
+  };
+
+  const openEditDialog = (user: User) => {
+    setSelectedUser(user);
+    setEditFormData({
+      full_name: user.full_name,
+      login_code: user.login_code,
+      role: user.role || 'staff',
+    });
+    setEditSelectedProperties(user.properties || []);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    setSubmitting(true);
+
+    try {
+      // Update profile (name and login_code)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editFormData.full_name,
+          login_code: editFormData.login_code,
+        })
+        .eq('user_id', selectedUser.user_id);
+
+      if (profileError) throw profileError;
+
+      // Update role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role: editFormData.role })
+        .eq('user_id', selectedUser.user_id);
+
+      if (roleError) throw roleError;
+
+      // Update property assignments
+      await supabase.from('property_assignments').delete().eq('user_id', selectedUser.user_id);
+      
+      if (editFormData.role !== 'superadmin' && editSelectedProperties.length > 0) {
+        await supabase.from('property_assignments').insert(
+          editSelectedProperties.map(pid => ({ user_id: selectedUser.user_id, property_id: pid }))
+        );
+      }
+
+      toast({ title: 'Berhasil', description: 'User berhasil diupdate' });
+      fetchData();
+      setEditDialogOpen(false);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Gagal update user', variant: 'destructive' });
+    }
+
+    setSubmitting(false);
   };
 
   const handleDelete = async (userId: string) => {
@@ -247,6 +305,7 @@ const AdminUsers = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(user)}><Edit className="h-4 w-4" /></Button>
                         {user.role !== 'superadmin' && <Button variant="ghost" size="icon" onClick={() => openAssignDialog(user)}><Building2 className="h-4 w-4" /></Button>}
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(user.user_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
@@ -273,6 +332,85 @@ const AdminUsers = () => {
               ))}
             </div>
             <div className="flex gap-3 pt-4"><Button variant="outline" onClick={() => setAssignDialogOpen(false)} className="flex-1">Batal</Button><Button onClick={handleAssignProperties} disabled={submitting} className="flex-1">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}</Button></div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit User</DialogTitle></DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={selectedUser?.email || ''} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Nama Lengkap *</Label>
+                <Input 
+                  value={editFormData.full_name} 
+                  onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Kode Login *</Label>
+                <Input 
+                  value={editFormData.login_code} 
+                  onChange={(e) => setEditFormData({ ...editFormData, login_code: e.target.value })} 
+                  required 
+                  minLength={6} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Role *</Label>
+                <Select 
+                  value={editFormData.role} 
+                  onValueChange={(v) => {
+                    const nextRole = v as AppRole;
+                    setEditFormData({ ...editFormData, role: nextRole });
+                    if (nextRole === 'superadmin') setEditSelectedProperties([]);
+                  }}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="hotel_manager">Hotel Manager</SelectItem>
+                    <SelectItem value="superadmin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {editFormData.role !== 'superadmin' && (
+                <div className="space-y-2">
+                  <Label>Assign Property (Multi)</Label>
+                  <div className="space-y-2 max-h-56 overflow-y-auto rounded-md border p-2">
+                    {properties.map(p => (
+                      <label key={p.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editSelectedProperties.includes(p.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setEditSelectedProperties([...editSelectedProperties, p.id]);
+                            else setEditSelectedProperties(editSelectedProperties.filter(id => id !== p.id));
+                          }}
+                          className="h-4 w-4"
+                        />
+                        <span>{p.name}</span>
+                      </label>
+                    ))}
+                    {properties.length === 0 && (
+                      <div className="p-2 text-sm text-muted-foreground">Belum ada property.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} className="flex-1">Batal</Button>
+                <Button type="submit" disabled={submitting} className="flex-1">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
