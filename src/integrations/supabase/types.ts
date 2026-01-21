@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       assets: {
         Row: {
+          additional_details: string | null
           brand: string | null
           category: Database["public"]["Enums"]["asset_category"]
           condition: Database["public"]["Enums"]["asset_condition"]
@@ -26,6 +27,7 @@ export type Database = {
           location_id: string | null
           name: string
           next_maintenance_date: string | null
+          photo_url: string | null
           property_id: string
           purchase_price: number | null
           series: string | null
@@ -33,6 +35,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          additional_details?: string | null
           brand?: string | null
           category: Database["public"]["Enums"]["asset_category"]
           condition?: Database["public"]["Enums"]["asset_condition"]
@@ -43,6 +46,7 @@ export type Database = {
           location_id?: string | null
           name: string
           next_maintenance_date?: string | null
+          photo_url?: string | null
           property_id: string
           purchase_price?: number | null
           series?: string | null
@@ -50,6 +54,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          additional_details?: string | null
           brand?: string | null
           category?: Database["public"]["Enums"]["asset_category"]
           condition?: Database["public"]["Enums"]["asset_condition"]
@@ -60,6 +65,7 @@ export type Database = {
           location_id?: string | null
           name?: string
           next_maintenance_date?: string | null
+          photo_url?: string | null
           property_id?: string
           purchase_price?: number | null
           series?: string | null

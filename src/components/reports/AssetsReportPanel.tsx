@@ -32,6 +32,8 @@ type AssetRow = {
   brand: string | null;
   series: string | null;
   purchase_price: number | null;
+  photo_url: string | null;
+  additional_details: string | null;
   properties?: { name: string } | null;
   locations?: { name: string } | null;
 };
@@ -169,6 +171,8 @@ export default function AssetsReportPanel(props: {
         'Harga Beli': a.purchase_price || 0,
         Kondisi: conditionLabels[cond] || a.condition || '-',
         Status: statusLabels[stat] || a.status || '-',
+        'Detail Lainnya': a.additional_details || '-',
+        'Foto URL': a.photo_url || '-',
       };
     });
 
