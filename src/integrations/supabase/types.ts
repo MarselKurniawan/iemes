@@ -27,7 +27,7 @@ export type Database = {
           location_id: string | null
           name: string
           next_maintenance_date: string | null
-          photo_url: string | null
+          photo_urls: string[] | null
           property_id: string
           purchase_price: number | null
           series: string | null
@@ -46,7 +46,7 @@ export type Database = {
           location_id?: string | null
           name: string
           next_maintenance_date?: string | null
-          photo_url?: string | null
+          photo_urls?: string[] | null
           property_id: string
           purchase_price?: number | null
           series?: string | null
@@ -65,7 +65,7 @@ export type Database = {
           location_id?: string | null
           name?: string
           next_maintenance_date?: string | null
-          photo_url?: string | null
+          photo_urls?: string[] | null
           property_id?: string
           purchase_price?: number | null
           series?: string | null

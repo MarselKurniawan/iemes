@@ -14,8 +14,9 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Package, Edit, Trash2, Loader2, AlertTriangle, Search, Filter, Camera, Upload, X, Image } from 'lucide-react';
+import { Plus, Package, Edit, Trash2, Loader2, AlertTriangle, Search, Filter, Image } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { ImageGallery, ImageGalleryInput } from '@/components/ui/image-gallery';
 
 type AssetCategory = 'peralatan_kamar' | 'peralatan_dapur' | 'mesin_laundry_housekeeping' | 'kendaraan_operasional' | 'peralatan_kantor_it' | 'peralatan_rekreasi_leisure' | 'infrastruktur' | 'elektronik' | 'perabot';
 type AssetCondition = 'baik' | 'cukup' | 'perlu_perbaikan' | 'rusak';
@@ -33,7 +34,7 @@ interface Asset {
   condition: AssetCondition;
   status: AssetStatus;
   next_maintenance_date: string | null;
-  photo_url: string | null;
+  photo_urls: string[] | null;
   additional_details: string | null;
   locations?: { name: string } | null;
 }
@@ -101,9 +102,7 @@ const Assets = () => {
     status: 'aktif' as AssetStatus,
     additional_details: '',
   });
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const canManage = role === 'superadmin' || role === 'hotel_manager';
@@ -177,49 +176,20 @@ const Assets = () => {
       status: 'aktif',
       additional_details: '',
     });
-    setPhotoFile(null);
-    setPhotoPreview(null);
-    setExistingPhotoUrl(null);
+    setPhotoUrls([]);
     setEditingAsset(null);
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removePhoto = () => {
-    setPhotoFile(null);
-    setPhotoPreview(null);
-    setExistingPhotoUrl(null);
-  };
-
   const uploadPhoto = async (file: File): Promise<string | null> => {
+    setUploadingPhoto(true);
     const fileExt = file.name.split('.').pop();
-    const fileName = `${propertyId}/${Date.now()}.${fileExt}`;
+    const fileName = `${propertyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     
     const { error } = await supabase.storage
       .from('evidence')
       .upload(fileName, file);
+    
+    setUploadingPhoto(false);
     
     if (error) {
       toast({ title: 'Error', description: 'Gagal upload foto: ' + error.message, variant: 'destructive' });
@@ -235,18 +205,6 @@ const Assets = () => {
     if (!propertyId) return;
     setSubmitting(true);
 
-    let photoUrl: string | null = existingPhotoUrl;
-
-    // Upload new photo if selected
-    if (photoFile) {
-      setUploadingPhoto(true);
-      const uploadedUrl = await uploadPhoto(photoFile);
-      setUploadingPhoto(false);
-      if (uploadedUrl) {
-        photoUrl = uploadedUrl;
-      }
-    }
-
     const payload = {
       property_id: propertyId,
       name: formData.name,
@@ -258,7 +216,7 @@ const Assets = () => {
       purchase_price: formData.purchase_price ? parseFloat(formData.purchase_price) : null,
       condition: formData.condition,
       status: formData.status,
-      photo_url: photoUrl,
+      photo_urls: photoUrls,
       additional_details: formData.additional_details || null,
     };
 
@@ -326,9 +284,7 @@ const Assets = () => {
         status: asset.status,
         additional_details: asset.additional_details || '',
       });
-      setPhotoFile(null);
-      setPhotoPreview(null);
-      setExistingPhotoUrl(asset.photo_url || null);
+      setPhotoUrls(asset.photo_urls || []);
       setDialogOpen(true);
     }
   };
@@ -519,56 +475,15 @@ const Assets = () => {
                       </Select>
                     </div>
                   </div>
-
                   {/* Photo Upload Section */}
                   <div className="space-y-2">
-                    <Label>Foto Aset</Label>
-                    {(photoPreview || existingPhotoUrl) ? (
-                      <div className="relative inline-block">
-                        <img 
-                          src={photoPreview || existingPhotoUrl || ''} 
-                          alt="Preview" 
-                          className="w-full max-w-xs h-40 object-cover rounded-lg border"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2 h-6 w-6"
-                          onClick={removePhoto}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <label className="flex-1">
-                          <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                            <Camera className="h-5 w-5 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">Kamera</span>
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleCameraCapture}
-                            className="hidden"
-                          />
-                        </label>
-                        <label className="flex-1">
-                          <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                            <Upload className="h-5 w-5 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">Upload</span>
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handlePhotoChange}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    )}
+                    <Label>Foto Aset (Multiple)</Label>
+                    <ImageGalleryInput
+                      images={photoUrls}
+                      onImagesChange={setPhotoUrls}
+                      onUpload={uploadPhoto}
+                      uploading={uploadingPhoto}
+                    />
                   </div>
 
                   {/* Detail Lainnya */}
@@ -692,15 +607,11 @@ const Assets = () => {
                   {filteredAssets.map((asset) => (
                     <TableRow key={asset.id}>
                       <TableCell>
-                        {asset.photo_url ? (
-                          <img 
-                            src={asset.photo_url} 
-                            alt={asset.name} 
-                            className="w-12 h-12 object-cover rounded-md border"
-                          />
+                        {asset.photo_urls && asset.photo_urls.length > 0 ? (
+                          <ImageGallery images={asset.photo_urls} />
                         ) : (
-                          <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
-                            <Image className="h-5 w-5 text-muted-foreground" />
+                          <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                            <Image className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
                       </TableCell>
