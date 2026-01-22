@@ -19,6 +19,7 @@ export type Database = {
           additional_details: string | null
           brand: string | null
           category: Database["public"]["Enums"]["asset_category"]
+          code: string
           condition: Database["public"]["Enums"]["asset_condition"]
           created_at: string
           id: string
@@ -38,6 +39,7 @@ export type Database = {
           additional_details?: string | null
           brand?: string | null
           category: Database["public"]["Enums"]["asset_category"]
+          code: string
           condition?: Database["public"]["Enums"]["asset_condition"]
           created_at?: string
           id?: string
@@ -57,6 +59,7 @@ export type Database = {
           additional_details?: string | null
           brand?: string | null
           category?: Database["public"]["Enums"]["asset_category"]
+          code?: string
           condition?: Database["public"]["Enums"]["asset_condition"]
           created_at?: string
           id?: string
@@ -127,6 +130,7 @@ export type Database = {
       maintenance: {
         Row: {
           asset_id: string | null
+          code: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -144,6 +148,7 @@ export type Database = {
         }
         Insert: {
           asset_id?: string | null
+          code: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -161,6 +166,7 @@ export type Database = {
         }
         Update: {
           asset_id?: string | null
+          code?: string
           created_at?: string
           created_by?: string | null
           description?: string | null

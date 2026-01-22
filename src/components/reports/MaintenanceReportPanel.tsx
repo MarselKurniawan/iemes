@@ -22,6 +22,7 @@ import {
 
 type MaintenanceRow = {
   id: string;
+  code: string;
   title: string;
   type: string;
   status: string;
@@ -175,6 +176,7 @@ export default function MaintenanceReportPanel(props: {
       const stat = m.status as MaintenanceStatus;
       return {
         Property: m.properties?.name || '-',
+        Kode: m.code,
         Judul: m.title,
         Tipe: typeLabels[typ] || m.type,
         Target: m.assets?.name || m.locations?.name || '-',
@@ -337,6 +339,7 @@ export default function MaintenanceReportPanel(props: {
                     aria-label="Pilih semua yang tampil"
                   />
                 </TableHead>
+                <TableHead>Kode</TableHead>
                 <TableHead>Judul</TableHead>
                 <TableHead>Tipe</TableHead>
                 <TableHead>Target</TableHead>
@@ -348,7 +351,7 @@ export default function MaintenanceReportPanel(props: {
             <TableBody>
               {previewLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Memuat data...
                     </div>
@@ -356,7 +359,7 @@ export default function MaintenanceReportPanel(props: {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <div className="py-8 text-center text-muted-foreground">Tidak ada data.</div>
                   </TableCell>
                 </TableRow>
@@ -376,6 +379,9 @@ export default function MaintenanceReportPanel(props: {
                           }}
                           aria-label={`Pilih ${r.title}`}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{r.code}</code>
                       </TableCell>
                       <TableCell className="font-medium">{r.title}</TableCell>
                       <TableCell>{typeLabels[typ] || r.type}</TableCell>

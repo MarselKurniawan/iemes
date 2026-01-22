@@ -24,6 +24,7 @@ import {
 
 type AssetRow = {
   id: string;
+  code: string;
   name: string;
   category: string | null;
   condition: string | null;
@@ -163,6 +164,7 @@ export default function AssetsReportPanel(props: {
       const stat = a.status as AssetStatus;
       return {
         Property: a.properties?.name || '-',
+        Kode: a.code,
         Nama: a.name,
         Kategori: categoryLabels[cat] || a.category || '-',
         Lokasi: a.locations?.name || (a.is_movable ? 'Bergerak' : '-'),
@@ -318,6 +320,7 @@ export default function AssetsReportPanel(props: {
                     aria-label="Pilih semua yang tampil"
                   />
                 </TableHead>
+                <TableHead>Kode</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Kategori</TableHead>
                 <TableHead>Lokasi</TableHead>
@@ -329,7 +332,7 @@ export default function AssetsReportPanel(props: {
             <TableBody>
               {previewLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Memuat data...
                     </div>
@@ -337,7 +340,7 @@ export default function AssetsReportPanel(props: {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <div className="py-8 text-center text-muted-foreground">Tidak ada data.</div>
                   </TableCell>
                 </TableRow>
@@ -358,6 +361,9 @@ export default function AssetsReportPanel(props: {
                           }}
                           aria-label={`Pilih ${r.name}`}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{r.code}</code>
                       </TableCell>
                       <TableCell className="font-medium">{r.name}</TableCell>
                       <TableCell>{categoryLabels[cat] || r.category || '-'}</TableCell>
