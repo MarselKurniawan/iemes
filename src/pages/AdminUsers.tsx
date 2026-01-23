@@ -12,13 +12,14 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Users, Edit, Trash2, Loader2, Building2 } from 'lucide-react';
 
-type AppRole = 'superadmin' | 'hotel_manager' | 'staff';
+type AppRole = 'superadmin' | 'supervisor' | 'hotel_manager' | 'staff';
 
 interface User { id: string; email: string; full_name: string; user_id: string; login_code: string; role?: AppRole; properties?: string[]; }
 interface Property { id: string; name: string; }
 
 const roleLabels: Record<AppRole, { label: string; class: string }> = {
   superadmin: { label: 'Super Admin', class: 'bg-purple-100 text-purple-700' },
+  supervisor: { label: 'Supervisor', class: 'bg-orange-100 text-orange-700' },
   hotel_manager: { label: 'Hotel Manager', class: 'bg-blue-100 text-blue-700' },
   staff: { label: 'Staff', class: 'bg-green-100 text-green-700' },
 };
@@ -238,6 +239,7 @@ const AdminUsers = () => {
                     <SelectContent>
                       <SelectItem value="staff">Staff</SelectItem>
                       <SelectItem value="hotel_manager">Hotel Manager</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
                       <SelectItem value="superadmin">Super Admin</SelectItem>
                     </SelectContent>
                   </Select>
@@ -374,6 +376,7 @@ const AdminUsers = () => {
                   <SelectContent>
                     <SelectItem value="staff">Staff</SelectItem>
                     <SelectItem value="hotel_manager">Hotel Manager</SelectItem>
+                    <SelectItem value="supervisor">Supervisor</SelectItem>
                     <SelectItem value="superadmin">Super Admin</SelectItem>
                   </SelectContent>
                 </Select>

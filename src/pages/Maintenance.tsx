@@ -14,10 +14,11 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Wrench, Edit, Trash2, Loader2, Eye, Upload, X, Image, Search, Filter } from 'lucide-react';
+import { Plus, Wrench, Edit, Trash2, Loader2, Eye, Upload, X, Image, Search, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 type MaintenanceType = 'renovasi_lokasi' | 'perbaikan_aset';
 type MaintenanceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+type ApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
 
 interface MaintenanceItem {
   id: string;
@@ -32,6 +33,10 @@ interface MaintenanceItem {
   end_date: string | null;
   asset_id: string | null;
   location_id: string | null;
+  approval_status: ApprovalStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
   assets?: { name: string } | null;
   locations?: { name: string } | null;
 }
@@ -58,6 +63,12 @@ const statusLabels: Record<MaintenanceStatus, { label: string; class: string }> 
   cancelled: { label: 'Dibatalkan', class: 'bg-gray-100 text-gray-700' },
 };
 
+const approvalLabels: Record<ApprovalStatus, { label: string; class: string }> = {
+  pending_approval: { label: 'Menunggu Approval', class: 'bg-yellow-100 text-yellow-700' },
+  approved: { label: 'Disetujui', class: 'bg-emerald-100 text-emerald-700' },
+  rejected: { label: 'Ditolak', class: 'bg-red-100 text-red-700' },
+};
+
 const Maintenance = () => {
   const { propertyId } = useParams();
   const { properties, setSelectedProperty } = useProperty();
@@ -70,7 +81,10 @@ const Maintenance = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [staffEditDialogOpen, setStaffEditDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MaintenanceItem | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [editingItem, setEditingItem] = useState<MaintenanceItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -82,6 +96,7 @@ const Maintenance = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterApproval, setFilterApproval] = useState<string>('all');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -95,9 +110,11 @@ const Maintenance = () => {
     location_id: '',
   });
 
-  const canManage = role === 'superadmin' || role === 'hotel_manager';
-  const canDelete = role === 'superadmin' || role === 'hotel_manager';
+  const canManage = role === 'superadmin' || role === 'hotel_manager' || role === 'supervisor';
+  const canDelete = role === 'superadmin' || role === 'hotel_manager' || role === 'supervisor';
+  const canApprove = role === 'superadmin' || role === 'supervisor';
   const isStaff = role === 'staff';
+  const canCreate = role !== 'staff' || role === 'staff'; // All roles can create, but staff requests need approval
 
   // Filtered items
   const filteredItems = items.filter(item => {
@@ -107,7 +124,8 @@ const Maintenance = () => {
     const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
     const matchesDateFrom = !filterDateFrom || item.start_date >= filterDateFrom;
     const matchesDateTo = !filterDateTo || item.start_date <= filterDateTo;
-    return matchesSearch && matchesType && matchesStatus && matchesDateFrom && matchesDateTo;
+    const matchesApproval = filterApproval === 'all' || item.approval_status === filterApproval;
+    return matchesSearch && matchesType && matchesStatus && matchesDateFrom && matchesDateTo && matchesApproval;
   });
 
   useEffect(() => {
@@ -131,7 +149,7 @@ const Maintenance = () => {
     if (maintenanceRes.error) {
       toast({ title: 'Error', description: maintenanceRes.error.message, variant: 'destructive' });
     } else {
-      setItems(maintenanceRes.data || []);
+      setItems((maintenanceRes.data || []) as MaintenanceItem[]);
     }
 
     setAssets(assetsRes.data || []);
@@ -209,6 +227,7 @@ const Maintenance = () => {
       asset_id: formData.type === 'perbaikan_aset' ? (formData.asset_id || null) : null,
       location_id: formData.type === 'renovasi_lokasi' ? (formData.location_id || null) : null,
       created_by: user.id,
+      approval_status: 'pending_approval',
     };
 
     if (editingItem) {
@@ -311,6 +330,58 @@ const Maintenance = () => {
     setDetailDialogOpen(true);
   };
 
+  const handleApprove = async (item: MaintenanceItem) => {
+    if (!user) return;
+    setSubmitting(true);
+
+    const { error } = await supabase
+      .from('maintenance')
+      .update({
+        approval_status: 'approved',
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+      })
+      .eq('id', item.id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Berhasil', description: 'Maintenance request disetujui' });
+      fetchData();
+    }
+    setSubmitting(false);
+  };
+
+  const openRejectDialog = (item: MaintenanceItem) => {
+    setSelectedItem(item);
+    setRejectionReason('');
+    setRejectDialogOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!selectedItem || !user) return;
+    setSubmitting(true);
+
+    const { error } = await supabase
+      .from('maintenance')
+      .update({
+        approval_status: 'rejected',
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+        rejection_reason: rejectionReason || null,
+      })
+      .eq('id', selectedItem.id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Berhasil', description: 'Maintenance request ditolak' });
+      fetchData();
+      setRejectDialogOpen(false);
+    }
+    setSubmitting(false);
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -331,7 +402,8 @@ const Maintenance = () => {
               Kelola maintenance dan perbaikan
             </p>
           </div>
-          {canManage && (
+          {/* All roles can create maintenance requests */}
+          {canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm}>
@@ -562,6 +634,17 @@ const Maintenance = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={filterApproval} onValueChange={setFilterApproval}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Approval" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Approval</SelectItem>
+                  {Object.entries(approvalLabels).map(([val, { label }]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-muted-foreground whitespace-nowrap">Dari:</Label>
                 <Input
@@ -608,8 +691,9 @@ const Maintenance = () => {
                     <TableHead>Target</TableHead>
                     <TableHead>Tanggal</TableHead>
                     <TableHead>Biaya</TableHead>
+                    <TableHead>Approval</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-28">Aksi</TableHead>
+                    <TableHead className="w-36">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -639,6 +723,11 @@ const Maintenance = () => {
                         Rp {item.total_cost.toLocaleString('id-ID')}
                       </TableCell>
                       <TableCell>
+                        <Badge className={approvalLabels[item.approval_status]?.class || 'bg-gray-100 text-gray-700'}>
+                          {approvalLabels[item.approval_status]?.label || item.approval_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <Badge className={statusLabels[item.status].class}>
                           {statusLabels[item.status].label}
                         </Badge>
@@ -648,9 +737,33 @@ const Maintenance = () => {
                           <Button variant="ghost" size="icon" onClick={() => openDetailDialog(item)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          {canApprove && item.approval_status === 'pending_approval' && (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => handleApprove(item)}
+                                disabled={submitting}
+                                title="Approve"
+                              >
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => openRejectDialog(item)}
+                                disabled={submitting}
+                                title="Reject"
+                              >
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </>
+                          )}
+                          {item.approval_status === 'approved' && (
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                           {canDelete && (
                             <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -693,6 +806,26 @@ const Maintenance = () => {
                     </Badge>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Approval</Label>
+                    <Badge className={approvalLabels[selectedItem.approval_status]?.class || 'bg-gray-100 text-gray-700'}>
+                      {approvalLabels[selectedItem.approval_status]?.label || selectedItem.approval_status}
+                    </Badge>
+                  </div>
+                  {selectedItem.approved_at && (
+                    <div>
+                      <Label className="text-muted-foreground">Tanggal Approval</Label>
+                      <p>{new Date(selectedItem.approved_at).toLocaleDateString('id-ID')}</p>
+                    </div>
+                  )}
+                </div>
+                {selectedItem.rejection_reason && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <Label className="text-red-700">Alasan Penolakan</Label>
+                    <p className="text-red-600">{selectedItem.rejection_reason}</p>
+                  </div>
+                )}
                 <div>
                   <Label className="text-muted-foreground">Target</Label>
                   <p>
@@ -842,6 +975,45 @@ const Maintenance = () => {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reject Dialog */}
+        <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Tolak Maintenance Request</DialogTitle>
+            </DialogHeader>
+            {selectedItem && (
+              <div className="space-y-4">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="font-medium">{selectedItem.title}</p>
+                  <p className="text-sm text-muted-foreground">{typeLabels[selectedItem.type]}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Alasan Penolakan</Label>
+                  <Textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Berikan alasan penolakan..."
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setRejectDialogOpen(false)} className="flex-1">
+                    Batal
+                  </Button>
+                  <Button 
+                    onClick={handleReject} 
+                    disabled={submitting} 
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Tolak Request'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

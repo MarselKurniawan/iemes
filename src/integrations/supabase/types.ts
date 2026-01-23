@@ -129,6 +129,9 @@ export type Database = {
       }
       maintenance: {
         Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           asset_id: string | null
           code: string
           created_at: string
@@ -139,6 +142,7 @@ export type Database = {
           id: string
           location_id: string | null
           property_id: string
+          rejection_reason: string | null
           start_date: string
           status: Database["public"]["Enums"]["maintenance_status"]
           title: string
@@ -147,6 +151,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           asset_id?: string | null
           code: string
           created_at?: string
@@ -157,6 +164,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           property_id: string
+          rejection_reason?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["maintenance_status"]
           title: string
@@ -165,6 +173,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           asset_id?: string | null
           code?: string
           created_at?: string
@@ -175,6 +186,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           property_id?: string
+          rejection_reason?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["maintenance_status"]
           title?: string

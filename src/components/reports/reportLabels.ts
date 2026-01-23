@@ -14,6 +14,7 @@ export type AssetStatus = 'aktif' | 'dalam_perbaikan' | 'tidak_aktif' | 'dihapus
 
 export type MaintenanceType = 'renovasi_lokasi' | 'perbaikan_aset';
 export type MaintenanceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type ApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
 
 export const categoryLabels: Record<AssetCategory, string> = {
   peralatan_kamar: 'Peralatan Kamar',
@@ -49,4 +50,10 @@ export const maintenanceStatusLabels: Record<MaintenanceStatus, string> = {
   in_progress: 'Dalam Proses',
   completed: 'Selesai',
   cancelled: 'Dibatalkan',
+};
+
+export const approvalStatusLabels: Record<ApprovalStatus, string> = {
+  pending_approval: 'Menunggu Approval',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
 };
