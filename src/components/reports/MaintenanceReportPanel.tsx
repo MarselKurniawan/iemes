@@ -16,8 +16,10 @@ import autoTable from 'jspdf-autotable';
 import {
   maintenanceStatusLabels,
   typeLabels,
+  approvalStatusLabels,
   type MaintenanceStatus,
   type MaintenanceType,
+  type ApprovalStatus,
 } from './reportLabels';
 
 type MaintenanceRow = {
@@ -26,11 +28,13 @@ type MaintenanceRow = {
   title: string;
   type: string;
   status: string;
+  approval_status: string;
   start_date: string;
   end_date: string | null;
   total_cost: number | null;
   description: string | null;
   evidence_urls: string[] | null;
+  rejection_reason: string | null;
   assets?: { name: string } | null;
   locations?: { name: string } | null;
   properties?: { name: string } | null;
@@ -174,6 +178,7 @@ export default function MaintenanceReportPanel(props: {
     const rowsOut = (data as MaintenanceRow[]).map(m => {
       const typ = m.type as MaintenanceType;
       const stat = m.status as MaintenanceStatus;
+      const appr = m.approval_status as ApprovalStatus;
       return {
         Property: m.properties?.name || '-',
         Kode: m.code,
@@ -183,6 +188,7 @@ export default function MaintenanceReportPanel(props: {
         'Tanggal Mulai': m.start_date,
         'Tanggal Selesai': m.end_date || '-',
         'Total Biaya': m.total_cost || 0,
+        Approval: approvalStatusLabels[appr] || m.approval_status,
         Status: maintenanceStatusLabels[stat] || m.status,
         Deskripsi: m.description || '-',
         Evidence: m.evidence_urls?.join(', ') || '-',
@@ -344,6 +350,7 @@ export default function MaintenanceReportPanel(props: {
                 <TableHead>Tipe</TableHead>
                 <TableHead>Target</TableHead>
                 <TableHead>Tanggal</TableHead>
+                <TableHead>Approval</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Property</TableHead>
               </TableRow>
@@ -351,7 +358,7 @@ export default function MaintenanceReportPanel(props: {
             <TableBody>
               {previewLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={9}>
                     <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Memuat data...
                     </div>
@@ -359,7 +366,7 @@ export default function MaintenanceReportPanel(props: {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={9}>
                     <div className="py-8 text-center text-muted-foreground">Tidak ada data.</div>
                   </TableCell>
                 </TableRow>
@@ -368,6 +375,7 @@ export default function MaintenanceReportPanel(props: {
                   const checked = selectedIds.includes(r.id);
                   const typ = r.type as MaintenanceType;
                   const stat = r.status as MaintenanceStatus;
+                  const appr = r.approval_status as ApprovalStatus;
                   return (
                     <TableRow key={r.id}>
                       <TableCell>
@@ -396,6 +404,7 @@ export default function MaintenanceReportPanel(props: {
                           </>
                         )}
                       </TableCell>
+                      <TableCell>{approvalStatusLabels[appr] || r.approval_status}</TableCell>
                       <TableCell>{maintenanceStatusLabels[stat] || r.status}</TableCell>
                       <TableCell>{r.properties?.name || '-'}</TableCell>
                     </TableRow>
