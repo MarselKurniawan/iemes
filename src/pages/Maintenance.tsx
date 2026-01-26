@@ -14,7 +14,8 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Wrench, Edit, Trash2, Loader2, Eye, Upload, X, Image, Search, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Wrench, Edit, Trash2, Loader2, Eye, X, Search, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { ImageGalleryInput } from '@/components/ui/image-gallery';
 
 type MaintenanceType = 'renovasi_lokasi' | 'perbaikan_aset';
 type MaintenanceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
@@ -177,33 +178,31 @@ const Maintenance = () => {
     setEvidenceFiles([]);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
+  // Upload photo with WebP (file sudah diconvert oleh ImageGalleryInput)
+  const uploadEvidence = async (file: File): Promise<string | null> => {
     setUploading(true);
-    const uploadedUrls: string[] = [];
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+    const filePath = `${propertyId}/${fileName}`;
 
-    for (const file of Array.from(files)) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `${propertyId}/${fileName}`;
+    const { error: uploadError } = await supabase.storage
+      .from('evidence')
+      .upload(filePath, file, {
+        contentType: 'image/webp',
+      });
 
-      const { error: uploadError } = await supabase.storage
-        .from('evidence')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        toast({ title: 'Error Upload', description: uploadError.message, variant: 'destructive' });
-      } else {
-        const { data: { publicUrl } } = supabase.storage.from('evidence').getPublicUrl(filePath);
-        uploadedUrls.push(publicUrl);
-      }
-    }
-
-    setEvidenceFiles([...evidenceFiles, ...uploadedUrls]);
     setUploading(false);
+
+    if (uploadError) {
+      toast({ title: 'Error Upload', description: uploadError.message, variant: 'destructive' });
+      return null;
+    }
+    
+    const { data: { publicUrl } } = supabase.storage.from('evidence').getPublicUrl(filePath);
+    return publicUrl;
   };
+
+  // Storage URL for direct access
+  const storageUrl = `https://wzabyfciqcuecmslyjwc.supabase.co/storage/v1/object/public/evidence/${propertyId}/`;
 
   const removeEvidence = (index: number) => {
     setEvidenceFiles(evidenceFiles.filter((_, i) => i !== index));
@@ -494,46 +493,14 @@ const Maintenance = () => {
 
                 <div className="space-y-2">
                   <Label>Evidence</Label>
-                  <div className="border-2 border-dashed rounded-lg p-4">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="evidence-upload"
-                      disabled={uploading}
-                    />
-                    <label
-                      htmlFor="evidence-upload"
-                      className="flex flex-col items-center cursor-pointer"
-                    >
-                      {uploading ? (
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                      ) : (
-                        <>
-                          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                          <span className="text-sm text-muted-foreground">Klik untuk upload foto</span>
-                        </>
-                      )}
-                    </label>
-                  </div>
-                  {evidenceFiles.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {evidenceFiles.map((url, idx) => (
-                        <div key={idx} className="relative group">
-                          <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
-                          <button
-                            type="button"
-                            onClick={() => removeEvidence(idx)}
-                            className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <ImageGalleryInput
+                    images={evidenceFiles}
+                    onImagesChange={setEvidenceFiles}
+                    onUpload={uploadEvidence}
+                    uploading={uploading}
+                    showStorageLink={true}
+                    storageUrl={storageUrl}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -924,46 +891,14 @@ const Maintenance = () => {
 
               <div className="space-y-2">
                 <Label>Evidence</Label>
-                <div className="border-2 border-dashed rounded-lg p-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="staff-evidence-upload"
-                    disabled={uploading}
-                  />
-                  <label
-                    htmlFor="staff-evidence-upload"
-                    className="flex flex-col items-center cursor-pointer"
-                  >
-                    {uploading ? (
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    ) : (
-                      <>
-                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                        <span className="text-sm text-muted-foreground">Klik untuk upload foto</span>
-                      </>
-                    )}
-                  </label>
-                </div>
-                {evidenceFiles.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {evidenceFiles.map((url, idx) => (
-                      <div key={idx} className="relative group">
-                        <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
-                        <button
-                          type="button"
-                          onClick={() => removeEvidence(idx)}
-                          className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ImageGalleryInput
+                  images={evidenceFiles}
+                  onImagesChange={setEvidenceFiles}
+                  onUpload={uploadEvidence}
+                  uploading={uploading}
+                  showStorageLink={true}
+                  storageUrl={storageUrl}
+                />
               </div>
 
               <div className="flex gap-3 pt-4">
