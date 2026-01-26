@@ -183,12 +183,14 @@ const Assets = () => {
 
   const uploadPhoto = async (file: File): Promise<string | null> => {
     setUploadingPhoto(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${propertyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    // File sudah dalam format WebP dari ImageGalleryInput
+    const fileName = `${propertyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
     
     const { error } = await supabase.storage
       .from('evidence')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        contentType: 'image/webp',
+      });
     
     setUploadingPhoto(false);
     
@@ -200,6 +202,9 @@ const Assets = () => {
     const { data: urlData } = supabase.storage.from('evidence').getPublicUrl(fileName);
     return urlData.publicUrl;
   };
+
+  // Storage URL for direct access
+  const storageUrl = `https://wzabyfciqcuecmslyjwc.supabase.co/storage/v1/object/public/evidence/${propertyId}/`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -485,6 +490,8 @@ const Assets = () => {
                       onImagesChange={setPhotoUrls}
                       onUpload={uploadPhoto}
                       uploading={uploadingPhoto}
+                      showStorageLink={true}
+                      storageUrl={storageUrl}
                     />
                   </div>
 

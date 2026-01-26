@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, ZoomIn, ExternalLink, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
+import { convertToWebP } from '@/lib/image-utils';
 interface ImageGalleryProps {
   images: string[];
   className?: string;
@@ -124,19 +124,38 @@ interface ImageGalleryInputProps {
   onImagesChange: (images: string[]) => void;
   onUpload: (file: File) => Promise<string | null>;
   uploading?: boolean;
+  showStorageLink?: boolean;
+  storageUrl?: string;
 }
 
-export function ImageGalleryInput({ images, onImagesChange, onUpload, uploading }: ImageGalleryInputProps) {
+export function ImageGalleryInput({ images, onImagesChange, onUpload, uploading, showStorageLink, storageUrl }: ImageGalleryInputProps) {
+  const [converting, setConverting] = useState(false);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
     
+    setConverting(true);
+    
     for (const file of Array.from(files)) {
-      const url = await onUpload(file);
-      if (url) {
-        onImagesChange([...images, url]);
+      try {
+        // Convert to WebP before upload for better compression
+        const webpFile = await convertToWebP(file, 0.85);
+        const url = await onUpload(webpFile);
+        if (url) {
+          onImagesChange([...images, url]);
+        }
+      } catch (error) {
+        console.error('Error converting image:', error);
+        // Fallback to original file if conversion fails
+        const url = await onUpload(file);
+        if (url) {
+          onImagesChange([...images, url]);
+        }
       }
     }
+    
+    setConverting(false);
     e.target.value = '';
   };
 
@@ -144,6 +163,8 @@ export function ImageGalleryInput({ images, onImagesChange, onUpload, uploading 
     const newImages = images.filter((_, i) => i !== index);
     onImagesChange(newImages);
   };
+
+  const isProcessing = uploading || converting;
 
   return (
     <div className="space-y-3">
@@ -174,14 +195,18 @@ export function ImageGalleryInput({ images, onImagesChange, onUpload, uploading 
         <label className="flex-1">
           <div className={cn(
             "flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
-            uploading && "opacity-50 pointer-events-none"
+            isProcessing && "opacity-50 pointer-events-none"
           )}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-              <circle cx="12" cy="13" r="3"/>
-            </svg>
+            {converting ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                <circle cx="12" cy="13" r="3"/>
+              </svg>
+            )}
             <span className="text-sm text-muted-foreground">
-              {uploading ? 'Uploading...' : 'Kamera'}
+              {converting ? 'Converting...' : uploading ? 'Uploading...' : 'Kamera'}
             </span>
           </div>
           <input
@@ -190,21 +215,25 @@ export function ImageGalleryInput({ images, onImagesChange, onUpload, uploading 
             capture="environment"
             onChange={handleFileChange}
             className="hidden"
-            disabled={uploading}
+            disabled={isProcessing}
           />
         </label>
         <label className="flex-1">
           <div className={cn(
             "flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
-            uploading && "opacity-50 pointer-events-none"
+            isProcessing && "opacity-50 pointer-events-none"
           )}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
+            {converting ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            )}
             <span className="text-sm text-muted-foreground">
-              {uploading ? 'Uploading...' : 'Upload'}
+              {converting ? 'Converting...' : uploading ? 'Uploading...' : 'Upload'}
             </span>
           </div>
           <input
@@ -213,10 +242,26 @@ export function ImageGalleryInput({ images, onImagesChange, onUpload, uploading 
             multiple
             onChange={handleFileChange}
             className="hidden"
-            disabled={uploading}
+            disabled={isProcessing}
           />
         </label>
       </div>
+
+      {showStorageLink && storageUrl && (
+        <a
+          href={storageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Buka folder storage
+        </a>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Foto otomatis dikonversi ke WebP untuk menghemat storage
+      </p>
     </div>
   );
 }
