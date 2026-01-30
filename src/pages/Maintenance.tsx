@@ -45,7 +45,11 @@ interface MaintenanceItem {
 interface Asset {
   id: string;
   name: string;
+  is_movable: boolean;
+  location_id: string | null;
 }
+
+type LocationTag = 'all' | 'aset_bergerak' | 'lokasi';
 
 interface Location {
   id: string;
@@ -109,6 +113,7 @@ const Maintenance = () => {
     end_date: '',
     asset_id: '',
     location_id: '',
+    location_tag: '' as LocationTag | '',
   });
 
   const canManage = role === 'superadmin' || role === 'hotel_manager' || role === 'supervisor';
@@ -116,6 +121,14 @@ const Maintenance = () => {
   const canApprove = role === 'superadmin' || role === 'supervisor';
   const isStaff = role === 'staff';
   const canCreate = role !== 'staff' || role === 'staff'; // All roles can create, but staff requests need approval
+
+  // Filter assets based on location tag selection
+  const filteredAssetsByTag = assets.filter(asset => {
+    if (!formData.location_tag) return true;
+    if (formData.location_tag === 'aset_bergerak') return asset.is_movable;
+    if (formData.location_tag === 'lokasi') return !asset.is_movable && asset.location_id === formData.location_id;
+    return true;
+  });
 
   // Filtered items
   const filteredItems = items.filter(item => {
@@ -143,7 +156,7 @@ const Maintenance = () => {
         .select('*, assets(name), locations(name)')
         .eq('property_id', propertyId)
         .order('created_at', { ascending: false }),
-      supabase.from('assets').select('id, name').eq('property_id', propertyId),
+      supabase.from('assets').select('id, name, is_movable, location_id').eq('property_id', propertyId),
       supabase.from('locations').select('id, name').eq('property_id', propertyId),
     ]);
 
@@ -173,6 +186,7 @@ const Maintenance = () => {
       end_date: '',
       asset_id: '',
       location_id: '',
+      location_tag: '',
     });
     setEditingItem(null);
     setEvidenceFiles([]);
@@ -273,6 +287,12 @@ const Maintenance = () => {
 
   const openEditDialog = (item: MaintenanceItem) => {
     setEditingItem(item);
+    // Determine location_tag based on asset's is_movable property
+    const assetData = assets.find(a => a.id === item.asset_id);
+    const locationTag = assetData 
+      ? (assetData.is_movable ? 'aset_bergerak' : 'lokasi') 
+      : '';
+    
     setFormData({
       title: item.title,
       type: item.type,
@@ -283,6 +303,7 @@ const Maintenance = () => {
       end_date: item.end_date || '',
       asset_id: item.asset_id || '',
       location_id: item.location_id || '',
+      location_tag: locationTag as LocationTag | '',
     });
     setEvidenceFiles(item.evidence_urls || []);
     
@@ -444,22 +465,65 @@ const Maintenance = () => {
                 </div>
 
                 {formData.type === 'perbaikan_aset' && (
-                  <div className="space-y-2">
-                    <Label>Aset</Label>
-                    <Select
-                      value={formData.asset_id}
-                      onValueChange={(v) => setFormData({ ...formData, asset_id: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih aset" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assets.map(asset => (
-                          <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <>
+                    <div className="space-y-2">
+                      <Label>Tag Lokasi Aset *</Label>
+                      <Select
+                        value={formData.location_tag}
+                        onValueChange={(v) => setFormData({ ...formData, location_tag: v as LocationTag, asset_id: '' })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih jenis lokasi aset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="aset_bergerak">Aset Bergerak</SelectItem>
+                          <SelectItem value="lokasi">Lokasi Tetap</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.location_tag === 'lokasi' && (
+                      <div className="space-y-2">
+                        <Label>Pilih Lokasi *</Label>
+                        <Select
+                          value={formData.location_id}
+                          onValueChange={(v) => setFormData({ ...formData, location_id: v, asset_id: '' })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih lokasi dulu" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locations.map(loc => (
+                              <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {(formData.location_tag === 'aset_bergerak' || (formData.location_tag === 'lokasi' && formData.location_id)) && (
+                      <div className="space-y-2">
+                        <Label>Aset *</Label>
+                        <Select
+                          value={formData.asset_id}
+                          onValueChange={(v) => setFormData({ ...formData, asset_id: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih aset" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filteredAssetsByTag.length > 0 ? (
+                              filteredAssetsByTag.map(asset => (
+                                <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
+                              ))
+                            ) : (
+                              <div className="px-2 py-1.5 text-sm text-muted-foreground">Tidak ada aset</div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {formData.type === 'renovasi_lokasi' && (
