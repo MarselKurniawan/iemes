@@ -14,8 +14,9 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Wrench, Edit, Trash2, Loader2, Eye, X, Search, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Wrench, Edit, Trash2, Loader2, Eye, X, Search, Filter, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 import { ImageGalleryInput } from '@/components/ui/image-gallery';
+import { generateMaintenanceDetailPdf } from '@/lib/maintenance-pdf';
 
 type MaintenanceType = 'renovasi_lokasi' | 'perbaikan_aset';
 type MaintenanceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
@@ -818,6 +819,33 @@ const Maintenance = () => {
             </DialogHeader>
             {selectedItem && (
               <div className="space-y-4">
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      generateMaintenanceDetailPdf({
+                        code: selectedItem.code,
+                        title: selectedItem.title,
+                        type: selectedItem.type,
+                        status: selectedItem.status,
+                        approval_status: selectedItem.approval_status,
+                        target: selectedItem.type === 'perbaikan_aset'
+                          ? selectedItem.assets?.name || '-'
+                          : selectedItem.locations?.name || '-',
+                        description: selectedItem.description,
+                        start_date: selectedItem.start_date,
+                        end_date: selectedItem.end_date,
+                        total_cost: selectedItem.total_cost,
+                        rejection_reason: selectedItem.rejection_reason,
+                        approved_at: selectedItem.approved_at,
+                      });
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Print PDF
+                  </Button>
+                </div>
                 <div className="flex items-center gap-3">
                   <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
                     {selectedItem.code}
