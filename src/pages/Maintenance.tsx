@@ -839,6 +839,7 @@ const Maintenance = () => {
                         total_cost: selectedItem.total_cost,
                         rejection_reason: selectedItem.rejection_reason,
                         approved_at: selectedItem.approved_at,
+                        evidence_urls: selectedItem.evidence_urls,
                       });
                     }}
                   >
