@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Package, Edit, Trash2, Loader2, AlertTriangle, Search, Filter, Image } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { ImageGallery, ImageGalleryInput } from '@/components/ui/image-gallery';
+import { uploadToExternalStorage, getExternalStorageUrl } from '@/lib/external-storage';
 
 type AssetCategory = 'peralatan_kamar' | 'peralatan_dapur' | 'mesin_laundry_housekeeping' | 'kendaraan_operasional' | 'peralatan_kantor_it' | 'peralatan_rekreasi_leisure' | 'infrastruktur' | 'elektronik' | 'perabot';
 type AssetCondition = 'baik' | 'cukup' | 'perlu_perbaikan' | 'rusak';
@@ -183,28 +184,18 @@ const Assets = () => {
 
   const uploadPhoto = async (file: File): Promise<string | null> => {
     setUploadingPhoto(true);
-    // File sudah dalam format WebP dari ImageGalleryInput
-    const fileName = `${propertyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-    
-    const { error } = await supabase.storage
-      .from('evidence')
-      .upload(fileName, file, {
-        contentType: 'image/webp',
-      });
-    
+    const url = await uploadToExternalStorage(file, propertyId);
     setUploadingPhoto(false);
     
-    if (error) {
-      toast({ title: 'Error', description: 'Gagal upload foto: ' + error.message, variant: 'destructive' });
+    if (!url) {
+      toast({ title: 'Error', description: 'Gagal upload foto', variant: 'destructive' });
       return null;
     }
-    
-    const { data: urlData } = supabase.storage.from('evidence').getPublicUrl(fileName);
-    return urlData.publicUrl;
+    return url;
   };
 
   // Storage URL for direct access
-  const storageUrl = `https://wzabyfciqcuecmslyjwc.supabase.co/storage/v1/object/public/evidence/${propertyId}/`;
+  const storageUrl = getExternalStorageUrl(propertyId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

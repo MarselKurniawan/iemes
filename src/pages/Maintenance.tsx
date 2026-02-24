@@ -16,6 +16,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Wrench, Edit, Trash2, Loader2, Eye, X, Search, Filter, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 import { ImageGalleryInput } from '@/components/ui/image-gallery';
+import { uploadToExternalStorage, getExternalStorageUrl } from '@/lib/external-storage';
 import { generateMaintenanceDetailPdf } from '@/lib/maintenance-pdf';
 
 type MaintenanceType = 'renovasi_lokasi' | 'perbaikan_aset';
@@ -196,28 +197,18 @@ const Maintenance = () => {
   // Upload photo with WebP (file sudah diconvert oleh ImageGalleryInput)
   const uploadEvidence = async (file: File): Promise<string | null> => {
     setUploading(true);
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-    const filePath = `${propertyId}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('evidence')
-      .upload(filePath, file, {
-        contentType: 'image/webp',
-      });
-
+    const url = await uploadToExternalStorage(file, propertyId);
     setUploading(false);
 
-    if (uploadError) {
-      toast({ title: 'Error Upload', description: uploadError.message, variant: 'destructive' });
+    if (!url) {
+      toast({ title: 'Error Upload', description: 'Gagal upload foto', variant: 'destructive' });
       return null;
     }
-    
-    const { data: { publicUrl } } = supabase.storage.from('evidence').getPublicUrl(filePath);
-    return publicUrl;
+    return url;
   };
 
   // Storage URL for direct access
-  const storageUrl = `https://wzabyfciqcuecmslyjwc.supabase.co/storage/v1/object/public/evidence/${propertyId}/`;
+  const storageUrl = getExternalStorageUrl(propertyId);
 
   const removeEvidence = (index: number) => {
     setEvidenceFiles(evidenceFiles.filter((_, i) => i !== index));
