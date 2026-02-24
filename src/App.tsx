@@ -14,6 +14,7 @@ import Maintenance from "./pages/Maintenance";
 import Reports from "./pages/Reports";
 import AdminProperties from "./pages/AdminProperties";
 import AdminUsers from "./pages/AdminUsers";
+import AdminMigration from "./pages/AdminMigration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const AppRoutes = () => (
     <Route path="/property/:propertyId/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
     <Route path="/admin/properties" element={<ProtectedRoute><AdminRoute><AdminProperties /></AdminRoute></ProtectedRoute>} />
     <Route path="/admin/users" element={<ProtectedRoute><AdminRoute><AdminUsers /></AdminRoute></ProtectedRoute>} />
+    <Route path="/admin/migration" element={<ProtectedRoute><AdminRoute><AdminMigration /></AdminRoute></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
