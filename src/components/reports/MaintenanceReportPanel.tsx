@@ -10,9 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Download, FileText, Loader2, ChevronDown, Filter } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generateBrandedReportPdf, formatDateId, formatCurrency } from '@/lib/report-pdf-helper';
+import { generateBrandedExcel } from '@/lib/report-excel-helper';
 import {
   maintenanceStatusLabels,
   typeLabels,
