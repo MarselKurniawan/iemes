@@ -10,9 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Download, FileText, Loader2, ChevronDown, Filter } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generateBrandedReportPdf, formatDateId, formatCurrency } from '@/lib/report-pdf-helper';
+import { generateBrandedExcel } from '@/lib/report-excel-helper';
 import {
   maintenanceStatusLabels,
   typeLabels,
@@ -175,46 +174,54 @@ export default function MaintenanceReportPanel(props: {
       return;
     }
 
-    const rowsOut = (data as MaintenanceRow[]).map(m => {
+    const typedData = data as MaintenanceRow[];
+    const headers = ['No', 'Kode', 'Judul', 'Tipe', 'Target', 'Tgl Mulai', 'Tgl Selesai', 'Total Biaya', 'Approval', 'Status', 'Deskripsi', 'Property'];
+    const bodyData = typedData.map((m, i) => {
       const typ = m.type as MaintenanceType;
       const stat = m.status as MaintenanceStatus;
       const appr = m.approval_status as ApprovalStatus;
-      return {
-        Property: m.properties?.name || '-',
-        Kode: m.code,
-        Judul: m.title,
-        Tipe: typeLabels[typ] || m.type,
-        Target: m.assets?.name || m.locations?.name || '-',
-        'Tanggal Mulai': m.start_date,
-        'Tanggal Selesai': m.end_date || '-',
-        'Total Biaya': m.total_cost || 0,
-        Approval: approvalStatusLabels[appr] || m.approval_status,
-        Status: maintenanceStatusLabels[stat] || m.status,
-        Deskripsi: m.description || '-',
-        Evidence: m.evidence_urls?.join(', ') || '-',
-      };
+      return [
+        i + 1,
+        m.code,
+        m.title,
+        typeLabels[typ] || m.type,
+        m.assets?.name || m.locations?.name || '-',
+        formatDateId(m.start_date),
+        m.end_date ? formatDateId(m.end_date) : '-',
+        formatCurrency(m.total_cost),
+        approvalStatusLabels[appr] || m.approval_status || '-',
+        maintenanceStatusLabels[stat] || m.status,
+        m.description || '-',
+        m.properties?.name || '-',
+      ];
     });
 
+    const subtitleText = maintPropertyFilter === 'all' ? 'Semua Property' : (selectedPropertyName || '');
     const fileName = maintPropertyFilter === 'all'
-      ? 'maintenance_all_properties'
-      : `maintenance_${selectedPropertyName || 'report'}`;
+      ? 'laporan_maintenance_semua_property'
+      : `laporan_maintenance_${selectedPropertyName || 'report'}`;
 
     if (format === 'excel') {
-      const ws = XLSX.utils.json_to_sheet(rowsOut);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Maintenance');
-      XLSX.writeFile(wb, `${fileName}.xlsx`);
+      generateBrandedExcel({
+        title: 'LAPORAN DATA MAINTENANCE',
+        subtitle: subtitleText,
+        headers,
+        body: bodyData,
+        sheetName: 'Maintenance',
+        fileName,
+      });
     } else {
-      const doc = new jsPDF({ orientation: 'landscape' });
-      doc.text(
-        `Laporan Maintenance${maintPropertyFilter === 'all' ? ' - Semua Property' : ` - ${selectedPropertyName || ''}`}`,
-        14,
-        15,
-      );
-      const headers = Object.keys(rowsOut[0]);
-      const bodyData = rowsOut.map(r => Object.values(r));
-      autoTable(doc, { head: [headers], body: bodyData, startY: 25, styles: { fontSize: 7 } });
-      doc.save(`${fileName}.pdf`);
+      generateBrandedReportPdf({
+        title: 'Laporan Maintenance',
+        subtitle: subtitleText,
+        headers,
+        body: bodyData,
+        orientation: 'landscape',
+        fileName,
+        totalRows: typedData.length,
+        selectedRows: selectedIds.length,
+        dateRange: { from: dateFrom || undefined, to: dateTo || undefined },
+      });
     }
 
     toast({
