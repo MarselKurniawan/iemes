@@ -211,7 +211,11 @@ export default function MaintenanceReportPanel(props: {
         fileName,
       });
     } else {
-      generateBrandedReportPdf({
+      const photos = typedData
+        .filter(m => m.evidence_urls && m.evidence_urls.length > 0)
+        .map(m => ({ label: `${m.code} — ${m.title}`, urls: m.evidence_urls! }));
+
+      await generateBrandedReportPdf({
         title: 'Laporan Maintenance',
         subtitle: subtitleText,
         headers,
@@ -221,6 +225,7 @@ export default function MaintenanceReportPanel(props: {
         totalRows: typedData.length,
         selectedRows: selectedIds.length,
         dateRange: { from: dateFrom || undefined, to: dateTo || undefined },
+        photos,
       });
     }
 
@@ -359,13 +364,14 @@ export default function MaintenanceReportPanel(props: {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Approval</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Evidence</TableHead>
                 <TableHead>Property</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {previewLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9}>
+                      <TableCell colSpan={10}>
                     <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Memuat data...
                     </div>
@@ -373,7 +379,7 @@ export default function MaintenanceReportPanel(props: {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9}>
+                  <TableCell colSpan={10}>
                     <div className="py-8 text-center text-muted-foreground">Tidak ada data.</div>
                   </TableCell>
                 </TableRow>
@@ -413,6 +419,18 @@ export default function MaintenanceReportPanel(props: {
                       </TableCell>
                       <TableCell>{approvalStatusLabels[appr] || r.approval_status}</TableCell>
                       <TableCell>{maintenanceStatusLabels[stat] || r.status}</TableCell>
+                      <TableCell>
+                        {r.evidence_urls && r.evidence_urls.length > 0 ? (
+                          <div className="flex gap-1">
+                            {r.evidence_urls.slice(0, 2).map((url, idx) => (
+                              <img key={idx} src={url} alt="" className="w-8 h-8 object-cover rounded border" />
+                            ))}
+                            {r.evidence_urls.length > 2 && (
+                              <span className="text-xs text-muted-foreground self-center">+{r.evidence_urls.length - 2}</span>
+                            )}
+                          </div>
+                        ) : <span className="text-muted-foreground text-xs">-</span>}
+                      </TableCell>
                       <TableCell>{r.properties?.name || '-'}</TableCell>
                     </TableRow>
                   );

@@ -194,7 +194,11 @@ export default function AssetsReportPanel(props: {
         fileName,
       });
     } else {
-      generateBrandedReportPdf({
+      const photos = typedData
+        .filter(a => a.photo_urls && a.photo_urls.length > 0)
+        .map(a => ({ label: `${a.code} — ${a.name}`, urls: a.photo_urls! }));
+
+      await generateBrandedReportPdf({
         title: 'Laporan Aset',
         subtitle: subtitleText,
         headers,
@@ -203,6 +207,7 @@ export default function AssetsReportPanel(props: {
         fileName,
         totalRows: typedData.length,
         selectedRows: selectedIds.length,
+        photos,
       });
     }
 
@@ -332,13 +337,14 @@ export default function AssetsReportPanel(props: {
                 <TableHead>Lokasi</TableHead>
                 <TableHead>Kondisi</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Foto</TableHead>
                 <TableHead>Property</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {previewLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                      <TableCell colSpan={9}>
                     <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Memuat data...
                     </div>
@@ -346,7 +352,7 @@ export default function AssetsReportPanel(props: {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={9}>
                     <div className="py-8 text-center text-muted-foreground">Tidak ada data.</div>
                   </TableCell>
                 </TableRow>
@@ -376,6 +382,18 @@ export default function AssetsReportPanel(props: {
                       <TableCell>{r.locations?.name || (r.is_movable ? 'Bergerak' : '-')}</TableCell>
                       <TableCell>{conditionLabels[cond] || r.condition || '-'}</TableCell>
                       <TableCell>{statusLabels[stat] || r.status || '-'}</TableCell>
+                      <TableCell>
+                        {r.photo_urls && r.photo_urls.length > 0 ? (
+                          <div className="flex gap-1">
+                            {r.photo_urls.slice(0, 2).map((url, idx) => (
+                              <img key={idx} src={url} alt="" className="w-8 h-8 object-cover rounded border" />
+                            ))}
+                            {r.photo_urls.length > 2 && (
+                              <span className="text-xs text-muted-foreground self-center">+{r.photo_urls.length - 2}</span>
+                            )}
+                          </div>
+                        ) : <span className="text-muted-foreground text-xs">-</span>}
+                      </TableCell>
                       <TableCell>{r.properties?.name || '-'}</TableCell>
                     </TableRow>
                   );

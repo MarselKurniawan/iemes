@@ -1,6 +1,11 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+interface PhotoItem {
+  label: string;
+  urls: string[];
+}
+
 interface ReportPdfOptions {
   title: string;
   subtitle?: string;
@@ -11,9 +16,25 @@ interface ReportPdfOptions {
   dateRange?: { from?: string; to?: string };
   totalRows?: number;
   selectedRows?: number;
+  photos?: PhotoItem[];
 }
 
-export function generateBrandedReportPdf(options: ReportPdfOptions) {
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function generateBrandedReportPdf(options: ReportPdfOptions) {
   const {
     title,
     subtitle,
@@ -24,6 +45,7 @@ export function generateBrandedReportPdf(options: ReportPdfOptions) {
     dateRange,
     totalRows,
     selectedRows,
+    photos,
   } = options;
 
   const doc = new jsPDF({ orientation });
@@ -32,31 +54,27 @@ export function generateBrandedReportPdf(options: ReportPdfOptions) {
   const margin = 14;
 
   // ── Header bar ──
-  doc.setFillColor(15, 23, 42); // slate-900
+  doc.setFillColor(15, 23, 42);
   doc.rect(0, 0, pageWidth, 38, 'F');
 
-  // Accent line
-  doc.setFillColor(59, 130, 246); // blue-500
+  doc.setFillColor(59, 130, 246);
   doc.rect(0, 38, pageWidth, 2.5, 'F');
 
-  // Logo text
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.text('SINERGI', margin, 20);
 
-  // Tagline
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(148, 163, 184);
   doc.text('Inventory Management System', margin, 28);
 
-  // Report type badge
   const badgeText = title.toUpperCase();
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   const badgeWidth = doc.getTextWidth(badgeText) + 14;
-  doc.setFillColor(30, 64, 175); // blue-800
+  doc.setFillColor(30, 64, 175);
   doc.roundedRect(pageWidth - margin - badgeWidth, 12, badgeWidth, 16, 2, 2, 'F');
   doc.setTextColor(255, 255, 255);
   doc.text(badgeText, pageWidth - margin - badgeWidth + 7, 22);
@@ -72,18 +90,13 @@ export function generateBrandedReportPdf(options: ReportPdfOptions) {
     currentY += 8;
   }
 
-  // Meta info line
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
 
   const metaParts: string[] = [];
-  if (totalRows !== undefined) {
-    metaParts.push(`Total: ${totalRows} data`);
-  }
-  if (selectedRows && selectedRows > 0) {
-    metaParts.push(`Terpilih: ${selectedRows} data`);
-  }
+  if (totalRows !== undefined) metaParts.push(`Total: ${totalRows} data`);
+  if (selectedRows && selectedRows > 0) metaParts.push(`Terpilih: ${selectedRows} data`);
   if (dateRange?.from || dateRange?.to) {
     const from = dateRange.from ? formatDateId(dateRange.from) : '...';
     const to = dateRange.to ? formatDateId(dateRange.to) : '...';
@@ -96,7 +109,6 @@ export function generateBrandedReportPdf(options: ReportPdfOptions) {
     currentY += 4;
   }
 
-  // Divider
   doc.setDrawColor(226, 232, 240);
   doc.setLineWidth(0.4);
   doc.line(margin, currentY, pageWidth - margin, currentY);
@@ -128,7 +140,6 @@ export function generateBrandedReportPdf(options: ReportPdfOptions) {
     },
     columnStyles: buildColumnStyles(headers),
     didParseCell: (data) => {
-      // Style cost/price columns with right alignment
       if (data.section === 'body') {
         const val = data.cell.raw;
         if (typeof val === 'string' && val.startsWith('Rp ')) {
@@ -139,6 +150,78 @@ export function generateBrandedReportPdf(options: ReportPdfOptions) {
     },
     margin: { left: margin, right: margin },
   });
+
+  // ── Photo appendix pages ──
+  if (photos && photos.length > 0) {
+    const itemsWithPhotos = photos.filter(p => p.urls.length > 0);
+
+    if (itemsWithPhotos.length > 0) {
+      doc.addPage();
+      let photoY = 20;
+
+      // Section header
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, pageWidth, 30, 'F');
+      doc.setFillColor(59, 130, 246);
+      doc.rect(0, 30, pageWidth, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LAMPIRAN FOTO / EVIDENCE', margin, 20);
+      photoY = 42;
+
+      const imgSize = orientation === 'landscape' ? 45 : 40;
+      const imagesPerRow = orientation === 'landscape' ? 5 : 4;
+      const gap = 6;
+
+      for (const item of itemsWithPhotos) {
+        // Check space for label + at least 1 row of images
+        if (photoY + 12 + imgSize > pageHeight - 20) {
+          doc.addPage();
+          photoY = 20;
+        }
+
+        // Item label
+        doc.setFillColor(241, 245, 249);
+        doc.roundedRect(margin, photoY, pageWidth - margin * 2, 10, 2, 2, 'F');
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text(item.label, margin + 4, photoY + 7);
+        photoY += 14;
+
+        for (let i = 0; i < item.urls.length; i++) {
+          const col = i % imagesPerRow;
+          const x = margin + col * (imgSize + gap);
+
+          if (col === 0 && i > 0) {
+            photoY += imgSize + gap + 4;
+          }
+
+          if (photoY + imgSize > pageHeight - 20) {
+            doc.addPage();
+            photoY = 20;
+          }
+
+          const base64 = await loadImageAsBase64(item.urls[i]);
+          if (base64) {
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(x, photoY, imgSize, imgSize, 2, 2, 'S');
+            try {
+              doc.addImage(base64, 'JPEG', x + 1, photoY + 1, imgSize - 2, imgSize - 2);
+            } catch {
+              doc.setFontSize(7);
+              doc.setTextColor(148, 163, 184);
+              doc.text('Error', x + imgSize / 2, photoY + imgSize / 2, { align: 'center' });
+            }
+          }
+        }
+
+        photoY += imgSize + gap + 8;
+      }
+    }
+  }
 
   // ── Footer on every page ──
   const totalPages = (doc as any).internal.getNumberOfPages();
