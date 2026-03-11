@@ -359,6 +359,7 @@ export default function MaintenanceReportPanel(props: {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Approval</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Evidence</TableHead>
                 <TableHead>Property</TableHead>
               </TableRow>
             </TableHeader>
