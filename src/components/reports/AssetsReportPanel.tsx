@@ -332,6 +332,7 @@ export default function AssetsReportPanel(props: {
                 <TableHead>Lokasi</TableHead>
                 <TableHead>Kondisi</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Foto</TableHead>
                 <TableHead>Property</TableHead>
               </TableRow>
             </TableHeader>
