@@ -377,6 +377,18 @@ export default function AssetsReportPanel(props: {
                       <TableCell>{r.locations?.name || (r.is_movable ? 'Bergerak' : '-')}</TableCell>
                       <TableCell>{conditionLabels[cond] || r.condition || '-'}</TableCell>
                       <TableCell>{statusLabels[stat] || r.status || '-'}</TableCell>
+                      <TableCell>
+                        {r.photo_urls && r.photo_urls.length > 0 ? (
+                          <div className="flex gap-1">
+                            {r.photo_urls.slice(0, 2).map((url, idx) => (
+                              <img key={idx} src={url} alt="" className="w-8 h-8 object-cover rounded border" />
+                            ))}
+                            {r.photo_urls.length > 2 && (
+                              <span className="text-xs text-muted-foreground self-center">+{r.photo_urls.length - 2}</span>
+                            )}
+                          </div>
+                        ) : <span className="text-muted-foreground text-xs">-</span>}
+                      </TableCell>
                       <TableCell>{r.properties?.name || '-'}</TableCell>
                     </TableRow>
                   );

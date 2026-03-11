@@ -414,6 +414,18 @@ export default function MaintenanceReportPanel(props: {
                       </TableCell>
                       <TableCell>{approvalStatusLabels[appr] || r.approval_status}</TableCell>
                       <TableCell>{maintenanceStatusLabels[stat] || r.status}</TableCell>
+                      <TableCell>
+                        {r.evidence_urls && r.evidence_urls.length > 0 ? (
+                          <div className="flex gap-1">
+                            {r.evidence_urls.slice(0, 2).map((url, idx) => (
+                              <img key={idx} src={url} alt="" className="w-8 h-8 object-cover rounded border" />
+                            ))}
+                            {r.evidence_urls.length > 2 && (
+                              <span className="text-xs text-muted-foreground self-center">+{r.evidence_urls.length - 2}</span>
+                            )}
+                          </div>
+                        ) : <span className="text-muted-foreground text-xs">-</span>}
+                      </TableCell>
                       <TableCell>{r.properties?.name || '-'}</TableCell>
                     </TableRow>
                   );
