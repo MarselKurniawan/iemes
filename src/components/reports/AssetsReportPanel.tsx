@@ -157,46 +157,53 @@ export default function AssetsReportPanel(props: {
       return;
     }
 
-    const rowsOut = (data as AssetRow[]).map(a => {
+    const typedData = data as AssetRow[];
+    const headers = ['No', 'Kode', 'Nama', 'Kategori', 'Lokasi', 'Merek', 'Seri', 'Harga Beli', 'Kondisi', 'Status', 'Detail Lainnya', 'Property'];
+    const bodyData = typedData.map((a, i) => {
       const cat = a.category as AssetCategory;
       const cond = a.condition as AssetCondition;
       const stat = a.status as AssetStatus;
-      return {
-        Property: a.properties?.name || '-',
-        Kode: a.code,
-        Nama: a.name,
-        Kategori: categoryLabels[cat] || a.category || '-',
-        Lokasi: a.locations?.name || (a.is_movable ? 'Bergerak' : '-'),
-        Merek: a.brand || '-',
-        Seri: a.series || '-',
-        'Harga Beli': a.purchase_price || 0,
-        Kondisi: conditionLabels[cond] || a.condition || '-',
-        Status: statusLabels[stat] || a.status || '-',
-        'Detail Lainnya': a.additional_details || '-',
-        'Foto URLs': a.photo_urls?.join(', ') || '-',
-      };
+      return [
+        i + 1,
+        a.code,
+        a.name,
+        categoryLabels[cat] || a.category || '-',
+        a.locations?.name || (a.is_movable ? 'Bergerak' : '-'),
+        a.brand || '-',
+        a.series || '-',
+        formatCurrency(a.purchase_price),
+        conditionLabels[cond] || a.condition || '-',
+        statusLabels[stat] || a.status || '-',
+        a.additional_details || '-',
+        a.properties?.name || '-',
+      ];
     });
 
+    const subtitleText = assetPropertyFilter === 'all' ? 'Semua Property' : (selectedPropertyName || '');
     const fileName = assetPropertyFilter === 'all'
-      ? 'assets_all_properties'
-      : `assets_${selectedPropertyName || 'report'}`;
+      ? 'laporan_aset_semua_property'
+      : `laporan_aset_${selectedPropertyName || 'report'}`;
 
     if (format === 'excel') {
-      const ws = XLSX.utils.json_to_sheet(rowsOut);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Assets');
-      XLSX.writeFile(wb, `${fileName}.xlsx`);
+      generateBrandedExcel({
+        title: 'LAPORAN DATA ASET',
+        subtitle: subtitleText,
+        headers,
+        body: bodyData,
+        sheetName: 'Aset',
+        fileName,
+      });
     } else {
-      const doc = new jsPDF({ orientation: 'landscape' });
-      doc.text(
-        `Laporan Aset${assetPropertyFilter === 'all' ? ' - Semua Property' : ` - ${selectedPropertyName || ''}`}`,
-        14,
-        15,
-      );
-      const headers = Object.keys(rowsOut[0]);
-      const bodyData = rowsOut.map(r => Object.values(r));
-      autoTable(doc, { head: [headers], body: bodyData, startY: 25, styles: { fontSize: 8 } });
-      doc.save(`${fileName}.pdf`);
+      generateBrandedReportPdf({
+        title: 'Laporan Aset',
+        subtitle: subtitleText,
+        headers,
+        body: bodyData,
+        orientation: 'landscape',
+        fileName,
+        totalRows: typedData.length,
+        selectedRows: selectedIds.length,
+      });
     }
 
     toast({
