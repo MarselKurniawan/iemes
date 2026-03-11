@@ -339,7 +339,7 @@ export default function AssetsReportPanel(props: {
             <TableBody>
               {previewLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                      <TableCell colSpan={9}>
                     <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Memuat data...
                     </div>
@@ -347,7 +347,7 @@ export default function AssetsReportPanel(props: {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={9}>
                     <div className="py-8 text-center text-muted-foreground">Tidak ada data.</div>
                   </TableCell>
                 </TableRow>
