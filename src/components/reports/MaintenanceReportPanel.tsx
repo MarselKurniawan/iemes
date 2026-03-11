@@ -211,7 +211,11 @@ export default function MaintenanceReportPanel(props: {
         fileName,
       });
     } else {
-      generateBrandedReportPdf({
+      const photos = typedData
+        .filter(m => m.evidence_urls && m.evidence_urls.length > 0)
+        .map(m => ({ label: `${m.code} — ${m.title}`, urls: m.evidence_urls! }));
+
+      await generateBrandedReportPdf({
         title: 'Laporan Maintenance',
         subtitle: subtitleText,
         headers,
@@ -221,6 +225,7 @@ export default function MaintenanceReportPanel(props: {
         totalRows: typedData.length,
         selectedRows: selectedIds.length,
         dateRange: { from: dateFrom || undefined, to: dateTo || undefined },
+        photos,
       });
     }
 

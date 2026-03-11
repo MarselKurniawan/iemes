@@ -194,7 +194,11 @@ export default function AssetsReportPanel(props: {
         fileName,
       });
     } else {
-      generateBrandedReportPdf({
+      const photos = typedData
+        .filter(a => a.photo_urls && a.photo_urls.length > 0)
+        .map(a => ({ label: `${a.code} — ${a.name}`, urls: a.photo_urls! }));
+
+      await generateBrandedReportPdf({
         title: 'Laporan Aset',
         subtitle: subtitleText,
         headers,
@@ -203,6 +207,7 @@ export default function AssetsReportPanel(props: {
         fileName,
         totalRows: typedData.length,
         selectedRows: selectedIds.length,
+        photos,
       });
     }
 
