@@ -789,7 +789,7 @@ const Maintenance = () => {
                             </Button>
                           )}
                           {canDelete && (
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(item)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           )}
