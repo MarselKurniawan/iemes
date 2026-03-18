@@ -36,6 +36,7 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({ email: '', full_name: '', login_code: '', role: 'staff' as AppRole });
   const [editFormData, setEditFormData] = useState({ full_name: '', login_code: '', role: 'staff' as AppRole });
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
@@ -187,6 +188,7 @@ const AdminUsers = () => {
   };
 
   const handleDelete = async (userId: string) => {
+    setDeleting(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -212,6 +214,7 @@ const AdminUsers = () => {
     } catch {
       toast({ title: 'Error', description: 'Gagal hapus user', variant: 'destructive' });
     }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
@@ -428,7 +431,8 @@ const AdminUsers = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.user_id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.user_id)} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Menghapus...</> : 'Hapus'}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

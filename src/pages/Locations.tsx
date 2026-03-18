@@ -43,6 +43,7 @@ const Locations = () => {
   const [formData, setFormData] = useState({ name: '', type: 'kamar' as LocationType });
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Location | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const canManage = role === 'superadmin' || role === 'hotel_manager';
 
@@ -110,6 +111,7 @@ const Locations = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     const { error } = await supabase.from('locations').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -117,6 +119,7 @@ const Locations = () => {
       toast({ title: 'Berhasil', description: 'Lokasi dihapus' });
       fetchLocations();
     }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
@@ -284,12 +287,13 @@ const Locations = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteTarget && handleDelete(deleteTarget.id)}
+                disabled={deleting}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Hapus
+                {deleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Menghapus...</> : 'Hapus'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

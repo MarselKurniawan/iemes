@@ -25,6 +25,7 @@ const AdminProperties = () => {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({ name: '', address: '', description: '' });
 
   const fetchProperties = async () => {
@@ -56,9 +57,11 @@ const AdminProperties = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     const { error } = await supabase.from('properties').delete().eq('id', id);
     if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
     else { toast({ title: 'Berhasil', description: 'Property dihapus' }); fetchProperties(); }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
@@ -117,7 +120,8 @@ const AdminProperties = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Menghapus...</> : 'Hapus'}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

@@ -86,6 +86,7 @@ const Assets = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Asset | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -250,6 +251,7 @@ const Assets = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     const { error } = await supabase.from('assets').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -257,6 +259,7 @@ const Assets = () => {
       toast({ title: 'Berhasil', description: 'Aset dihapus' });
       fetchAssets();
     }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
@@ -750,7 +753,8 @@ const Assets = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Menghapus...</> : 'Hapus'}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

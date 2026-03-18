@@ -96,6 +96,7 @@ const Maintenance = () => {
   const [editingItem, setEditingItem] = useState<MaintenanceItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MaintenanceItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
 
@@ -268,6 +269,7 @@ const Maintenance = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     const { error } = await supabase.from('maintenance').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -275,6 +277,7 @@ const Maintenance = () => {
       toast({ title: 'Berhasil', description: 'Maintenance dihapus' });
       fetchData();
     }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
@@ -1047,7 +1050,8 @@ const Maintenance = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+              <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Menghapus...</> : 'Hapus'}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
