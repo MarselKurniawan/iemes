@@ -24,6 +24,7 @@ const AdminProperties = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
   const [formData, setFormData] = useState({ name: '', address: '', description: '' });
 
   const fetchProperties = async () => {
