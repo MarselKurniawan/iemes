@@ -269,6 +269,7 @@ const Maintenance = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     const { error } = await supabase.from('maintenance').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -276,6 +277,7 @@ const Maintenance = () => {
       toast({ title: 'Berhasil', description: 'Maintenance dihapus' });
       fetchData();
     }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
