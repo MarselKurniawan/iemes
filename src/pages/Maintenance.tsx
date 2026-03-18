@@ -96,6 +96,7 @@ const Maintenance = () => {
   const [editingItem, setEditingItem] = useState<MaintenanceItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MaintenanceItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
 
