@@ -212,6 +212,7 @@ const AdminUsers = () => {
     } catch {
       toast({ title: 'Error', description: 'Gagal hapus user', variant: 'destructive' });
     }
+    setDeleteTarget(null);
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-[60vh]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></DashboardLayout>;
