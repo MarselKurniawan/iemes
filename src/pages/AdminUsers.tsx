@@ -36,6 +36,7 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({ email: '', full_name: '', login_code: '', role: 'staff' as AppRole });
   const [editFormData, setEditFormData] = useState({ full_name: '', login_code: '', role: 'staff' as AppRole });
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
