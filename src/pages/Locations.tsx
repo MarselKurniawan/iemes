@@ -43,6 +43,7 @@ const Locations = () => {
   const [formData, setFormData] = useState({ name: '', type: 'kamar' as LocationType });
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Location | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const canManage = role === 'superadmin' || role === 'hotel_manager';
 
