@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,6 +95,7 @@ const Maintenance = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [editingItem, setEditingItem] = useState<MaintenanceItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<MaintenanceItem | null>(null);
   const [uploading, setUploading] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
 
@@ -266,8 +268,6 @@ const Maintenance = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus maintenance ini?')) return;
-
     const { error } = await supabase.from('maintenance').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -275,6 +275,7 @@ const Maintenance = () => {
       toast({ title: 'Berhasil', description: 'Maintenance dihapus' });
       fetchData();
     }
+    setDeleteTarget(null);
   };
 
   const openEditDialog = (item: MaintenanceItem) => {
@@ -788,7 +789,7 @@ const Maintenance = () => {
                             </Button>
                           )}
                           {canDelete && (
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(item)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           )}
@@ -1035,6 +1036,21 @@ const Maintenance = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Maintenance</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus maintenance <strong>{deleteTarget?.title}</strong>? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

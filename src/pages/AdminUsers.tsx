@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +35,7 @@ const AdminUsers = () => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [formData, setFormData] = useState({ email: '', full_name: '', login_code: '', role: 'staff' as AppRole });
   const [editFormData, setEditFormData] = useState({ full_name: '', login_code: '', role: 'staff' as AppRole });
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
@@ -185,8 +187,6 @@ const AdminUsers = () => {
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('Hapus user ini?')) return;
-
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -212,6 +212,7 @@ const AdminUsers = () => {
     } catch {
       toast({ title: 'Error', description: 'Gagal hapus user', variant: 'destructive' });
     }
+    setDeleteTarget(null);
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-[60vh]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></DashboardLayout>;
@@ -309,7 +310,7 @@ const AdminUsers = () => {
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(user)}><Edit className="h-4 w-4" /></Button>
                         {user.role !== 'superadmin' && <Button variant="ghost" size="icon" onClick={() => openAssignDialog(user)}><Building2 className="h-4 w-4" /></Button>}
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(user.user_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(user)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -416,6 +417,21 @@ const AdminUsers = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus user <strong>{deleteTarget?.full_name}</strong>? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.user_id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
