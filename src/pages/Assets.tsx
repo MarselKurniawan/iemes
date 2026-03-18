@@ -659,7 +659,7 @@ const Assets = () => {
                             <Button variant="ghost" size="icon" onClick={() => openEditDialog(asset)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(asset.id)}>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(asset)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
