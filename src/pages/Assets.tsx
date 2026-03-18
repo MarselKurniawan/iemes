@@ -86,6 +86,7 @@ const Assets = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Asset | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
