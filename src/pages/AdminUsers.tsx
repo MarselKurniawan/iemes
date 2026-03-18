@@ -188,6 +188,7 @@ const AdminUsers = () => {
   };
 
   const handleDelete = async (userId: string) => {
+    setDeleting(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
