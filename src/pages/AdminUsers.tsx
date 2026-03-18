@@ -214,6 +214,7 @@ const AdminUsers = () => {
     } catch {
       toast({ title: 'Error', description: 'Gagal hapus user', variant: 'destructive' });
     }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
