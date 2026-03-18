@@ -85,6 +85,7 @@ const Assets = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Asset | null>(null);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
