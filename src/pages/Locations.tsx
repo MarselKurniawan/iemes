@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useProperty } from '@/contexts/PropertyContext';
@@ -41,6 +42,7 @@ const Locations = () => {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [formData, setFormData] = useState({ name: '', type: 'kamar' as LocationType });
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Location | null>(null);
 
   const canManage = role === 'superadmin' || role === 'hotel_manager';
 
@@ -108,8 +110,6 @@ const Locations = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus lokasi ini?')) return;
-    
     const { error } = await supabase.from('locations').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -117,6 +117,7 @@ const Locations = () => {
       toast({ title: 'Berhasil', description: 'Lokasi dihapus' });
       fetchLocations();
     }
+    setDeleteTarget(null);
   };
 
   const openEditDialog = (location: Location) => {
@@ -255,10 +256,10 @@ const Locations = () => {
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button 
+                                <Button 
                                 variant="ghost" 
                                 size="icon"
-                                onClick={() => handleDelete(location.id)}
+                                onClick={() => setDeleteTarget(location)}
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
@@ -273,6 +274,26 @@ const Locations = () => {
             })}
           </div>
         )}
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Lokasi</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus lokasi <strong>{deleteTarget?.name}</strong>? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteTarget && handleDelete(deleteTarget.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
