@@ -309,7 +309,7 @@ const AdminUsers = () => {
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(user)}><Edit className="h-4 w-4" /></Button>
                         {user.role !== 'superadmin' && <Button variant="ghost" size="icon" onClick={() => openAssignDialog(user)}><Building2 className="h-4 w-4" /></Button>}
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(user.user_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(user)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
