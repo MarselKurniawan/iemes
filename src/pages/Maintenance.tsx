@@ -1049,7 +1049,6 @@ const Maintenance = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
               <AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel>
               <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget.id)} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Menghapus...</> : 'Hapus'}</AlertDialogAction>
             </AlertDialogFooter>
