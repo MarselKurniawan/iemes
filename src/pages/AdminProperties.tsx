@@ -57,9 +57,11 @@ const AdminProperties = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     const { error } = await supabase.from('properties').delete().eq('id', id);
     if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
     else { toast({ title: 'Berhasil', description: 'Property dihapus' }); fetchProperties(); }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
