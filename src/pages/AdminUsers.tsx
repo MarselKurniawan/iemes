@@ -187,8 +187,6 @@ const AdminUsers = () => {
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('Hapus user ini?')) return;
-
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
