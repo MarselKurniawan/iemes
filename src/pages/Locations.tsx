@@ -111,6 +111,7 @@ const Locations = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleting(true);
     const { error } = await supabase.from('locations').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -118,6 +119,7 @@ const Locations = () => {
       toast({ title: 'Berhasil', description: 'Lokasi dihapus' });
       fetchLocations();
     }
+    setDeleting(false);
     setDeleteTarget(null);
   };
 
