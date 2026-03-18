@@ -110,8 +110,6 @@ const Locations = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus lokasi ini?')) return;
-    
     const { error } = await supabase.from('locations').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -119,6 +117,7 @@ const Locations = () => {
       toast({ title: 'Berhasil', description: 'Lokasi dihapus' });
       fetchLocations();
     }
+    setDeleteTarget(null);
   };
 
   const openEditDialog = (location: Location) => {
