@@ -268,8 +268,6 @@ const Maintenance = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus maintenance ini?')) return;
-
     const { error } = await supabase.from('maintenance').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -277,6 +275,7 @@ const Maintenance = () => {
       toast({ title: 'Berhasil', description: 'Maintenance dihapus' });
       fetchData();
     }
+    setDeleteTarget(null);
   };
 
   const openEditDialog = (item: MaintenanceItem) => {
