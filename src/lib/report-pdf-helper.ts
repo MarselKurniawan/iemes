@@ -174,6 +174,8 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
   // ── Photo appendix pages ──
   if (photos && photos.length > 0) {
     const itemsWithPhotos = photos.filter(p => p.urls.length > 0);
+    // Preload all images in parallel
+    const photoCache = await preloadAllPhotos(itemsWithPhotos);
 
     if (itemsWithPhotos.length > 0) {
       doc.addPage();
