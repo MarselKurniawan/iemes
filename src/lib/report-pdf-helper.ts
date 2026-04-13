@@ -17,6 +17,7 @@ interface ReportPdfOptions {
   totalRows?: number;
   selectedRows?: number;
   photos?: PhotoItem[];
+  onProgress?: (message: string) => void;
 }
 
 async function loadImageAsBase64(url: string, timeoutMs = 5000): Promise<string | null> {
@@ -66,7 +67,10 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
     totalRows,
     selectedRows,
     photos,
+    onProgress,
   } = options;
+
+  onProgress?.('Menyiapkan dokumen...');
 
   const doc = new jsPDF({ orientation });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -174,8 +178,12 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
   // ── Photo appendix pages ──
   if (photos && photos.length > 0) {
     const itemsWithPhotos = photos.filter(p => p.urls.length > 0);
-    // Preload all images in parallel
+    const totalPhotos = itemsWithPhotos.reduce((sum, p) => sum + p.urls.length, 0);
+    if (totalPhotos > 0) {
+      onProgress?.(`Mengunduh ${totalPhotos} foto...`);
+    }
     const photoCache = await preloadAllPhotos(itemsWithPhotos);
+    onProgress?.('Merender halaman foto...');
 
     if (itemsWithPhotos.length > 0) {
       doc.addPage();
@@ -260,6 +268,7 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
     doc.text(`Halaman ${i} / ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
   }
 
+  onProgress?.('Menyimpan file PDF...');
   doc.save(`${fileName}.pdf`);
 }
 
