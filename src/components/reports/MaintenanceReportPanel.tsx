@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Download, FileText, Loader2, ChevronDown, Filter } from 'lucide-react';
 import { generateBrandedReportPdf, formatDateId, formatCurrency } from '@/lib/report-pdf-helper';
@@ -48,7 +48,7 @@ export default function MaintenanceReportPanel(props: {
   selectedPropertyName?: string;
   isSuperadmin: boolean;
 }) {
-  const { toast } = useToast();
+  // using sonner toast
   const { propertyId, selectedPropertyName, isSuperadmin } = props;
 
   const [exportLoading, setExportLoading] = useState(false);
@@ -128,7 +128,7 @@ export default function MaintenanceReportPanel(props: {
     setPreviewLoading(true);
     const { data, error } = await buildBaseQuery().order('start_date', { ascending: false });
     if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast.error(error.message);
       setPreviewLoading(false);
       return;
     }
@@ -157,19 +157,20 @@ export default function MaintenanceReportPanel(props: {
 
   const exportMaintenance = async (format: 'excel' | 'pdf') => {
     setExportLoading(true);
+    const toastId = toast.loading('Memuat data...', { duration: Infinity });
 
     let query = buildBaseQuery();
     if (selectedIds.length > 0) query = query.in('id', selectedIds);
 
     const { data, error } = await query;
     if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast.error(error.message, { id: toastId });
       setExportLoading(false);
       return;
     }
 
     if (!data || data.length === 0) {
-      toast({ title: 'Info', description: 'Tidak ada data maintenance untuk di-export', variant: 'default' });
+      toast.info('Tidak ada data maintenance untuk di-export', { id: toastId });
       setExportLoading(false);
       return;
     }
@@ -202,6 +203,7 @@ export default function MaintenanceReportPanel(props: {
       : `laporan_maintenance_${selectedPropertyName || 'report'}`;
 
     if (format === 'excel') {
+      toast.loading('Membuat file Excel...', { id: toastId });
       generateBrandedExcel({
         title: 'LAPORAN DATA MAINTENANCE',
         subtitle: subtitleText,
@@ -226,13 +228,14 @@ export default function MaintenanceReportPanel(props: {
         selectedRows: selectedIds.length,
         dateRange: { from: dateFrom || undefined, to: dateTo || undefined },
         photos,
+        onProgress: (msg) => toast.loading(msg, { id: toastId }),
       });
     }
 
-    toast({
-      title: 'Berhasil',
-      description: selectedIds.length > 0 ? 'Laporan (terpilih) berhasil di-export' : 'Laporan berhasil di-export',
-    });
+    toast.success(
+      selectedIds.length > 0 ? 'Laporan (terpilih) berhasil di-export' : 'Laporan berhasil di-export',
+      { id: toastId, duration: 3000 }
+    );
     setExportLoading(false);
   };
 
