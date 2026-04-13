@@ -113,7 +113,7 @@ export default function AssetsReportPanel(props: {
     setPreviewLoading(true);
     const { data, error } = await buildBaseQuery().order('name');
     if (error) {
-      toast.error(error.message, { id: toastId });
+      toast.error(error.message);
       setPreviewLoading(false);
       return;
     }
