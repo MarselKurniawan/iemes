@@ -225,7 +225,7 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
             photoY = 20;
           }
 
-          const base64 = await loadImageAsBase64(item.urls[i]);
+          const base64 = photoCache.get(item.urls[i]) ?? null;
           if (base64) {
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.3);
