@@ -157,19 +157,20 @@ export default function MaintenanceReportPanel(props: {
 
   const exportMaintenance = async (format: 'excel' | 'pdf') => {
     setExportLoading(true);
+    const toastId = toast.loading('Memuat data...', { duration: Infinity });
 
     let query = buildBaseQuery();
     if (selectedIds.length > 0) query = query.in('id', selectedIds);
 
     const { data, error } = await query;
     if (error) {
-      toast.error(error.message);
+      toast.error(error.message, { id: toastId });
       setExportLoading(false);
       return;
     }
 
     if (!data || data.length === 0) {
-      toast.info('Tidak ada data maintenance untuk di-export');
+      toast.info('Tidak ada data maintenance untuk di-export', { id: toastId });
       setExportLoading(false);
       return;
     }
@@ -202,6 +203,7 @@ export default function MaintenanceReportPanel(props: {
       : `laporan_maintenance_${selectedPropertyName || 'report'}`;
 
     if (format === 'excel') {
+      toast.loading('Membuat file Excel...', { id: toastId });
       generateBrandedExcel({
         title: 'LAPORAN DATA MAINTENANCE',
         subtitle: subtitleText,
@@ -226,13 +228,14 @@ export default function MaintenanceReportPanel(props: {
         selectedRows: selectedIds.length,
         dateRange: { from: dateFrom || undefined, to: dateTo || undefined },
         photos,
+        onProgress: (msg) => toast.loading(msg, { id: toastId }),
       });
     }
 
-    toast({
-      title: 'Berhasil',
-      description: selectedIds.length > 0 ? 'Laporan (terpilih) berhasil di-export' : 'Laporan berhasil di-export',
-    });
+    toast.success(
+      selectedIds.length > 0 ? 'Laporan (terpilih) berhasil di-export' : 'Laporan berhasil di-export',
+      { id: toastId, duration: 3000 }
+    );
     setExportLoading(false);
   };
 
