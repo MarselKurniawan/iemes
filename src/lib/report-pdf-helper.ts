@@ -19,9 +19,12 @@ interface ReportPdfOptions {
   photos?: PhotoItem[];
 }
 
-async function loadImageAsBase64(url: string): Promise<string | null> {
+async function loadImageAsBase64(url: string, timeoutMs = 5000): Promise<string | null> {
   try {
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
     const blob = await response.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -32,6 +35,23 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/** Pre-load all photos in parallel so the PDF render is fast */
+async function preloadAllPhotos(photos: PhotoItem[]): Promise<Map<string, string | null>> {
+  const cache = new Map<string, string | null>();
+  const uniqueUrls = new Set<string>();
+  for (const item of photos) {
+    for (const url of item.urls) uniqueUrls.add(url);
+  }
+  const entries = await Promise.all(
+    Array.from(uniqueUrls).map(async (url) => {
+      const data = await loadImageAsBase64(url);
+      return [url, data] as const;
+    })
+  );
+  for (const [url, data] of entries) cache.set(url, data);
+  return cache;
 }
 
 export async function generateBrandedReportPdf(options: ReportPdfOptions) {
@@ -154,6 +174,8 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
   // ── Photo appendix pages ──
   if (photos && photos.length > 0) {
     const itemsWithPhotos = photos.filter(p => p.urls.length > 0);
+    // Preload all images in parallel
+    const photoCache = await preloadAllPhotos(itemsWithPhotos);
 
     if (itemsWithPhotos.length > 0) {
       doc.addPage();
@@ -203,7 +225,7 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
             photoY = 20;
           }
 
-          const base64 = await loadImageAsBase64(item.urls[i]);
+          const base64 = photoCache.get(item.urls[i]) ?? null;
           if (base64) {
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.3);
