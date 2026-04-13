@@ -48,7 +48,7 @@ export default function MaintenanceReportPanel(props: {
   selectedPropertyName?: string;
   isSuperadmin: boolean;
 }) {
-  const { toast } = useToast();
+  // using sonner toast
   const { propertyId, selectedPropertyName, isSuperadmin } = props;
 
   const [exportLoading, setExportLoading] = useState(false);
@@ -128,7 +128,7 @@ export default function MaintenanceReportPanel(props: {
     setPreviewLoading(true);
     const { data, error } = await buildBaseQuery().order('start_date', { ascending: false });
     if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast.error(error.message);
       setPreviewLoading(false);
       return;
     }
@@ -163,13 +163,13 @@ export default function MaintenanceReportPanel(props: {
 
     const { data, error } = await query;
     if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast.error(error.message);
       setExportLoading(false);
       return;
     }
 
     if (!data || data.length === 0) {
-      toast({ title: 'Info', description: 'Tidak ada data maintenance untuk di-export', variant: 'default' });
+      toast.info('Tidak ada data maintenance untuk di-export');
       setExportLoading(false);
       return;
     }

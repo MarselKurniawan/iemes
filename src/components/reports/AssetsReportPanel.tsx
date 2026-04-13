@@ -113,7 +113,7 @@ export default function AssetsReportPanel(props: {
     setPreviewLoading(true);
     const { data, error } = await buildBaseQuery().order('name');
     if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast.error(error.message);
       setPreviewLoading(false);
       return;
     }
@@ -147,13 +147,13 @@ export default function AssetsReportPanel(props: {
 
     const { data, error } = await query;
     if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast.error(error.message);
       setExportLoading(false);
       return;
     }
 
     if (!data || data.length === 0) {
-      toast({ title: 'Info', description: 'Tidak ada data aset untuk di-export', variant: 'default' });
+      toast.info('Tidak ada data aset untuk di-export');
       setExportLoading(false);
       return;
     }
