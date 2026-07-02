@@ -158,12 +158,14 @@ const PropertyCard = ({
   name,
   address,
   description,
+  imageUrl,
   onOpen,
 }: {
   index: number;
   name: string;
   address: string | null;
   description: string | null;
+  imageUrl: string | null;
   onOpen: () => void;
 }) => {
   const gradient = gradients[index % gradients.length];
@@ -180,8 +182,12 @@ const PropertyCard = ({
       onClick={onOpen}
       className="group text-left rounded-2xl border bg-card overflow-hidden hover:shadow-lg hover:border-primary/40 transition-all"
     >
-      <div className={`relative h-32 bg-gradient-to-br ${gradient}`}>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_60%)]" />
+      <div className={`relative h-32 ${imageUrl ? 'bg-muted' : `bg-gradient-to-br ${gradient}`}`}>
+        {imageUrl ? (
+          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_60%)]" />
+        )}
         <Badge className="absolute top-3 right-3 bg-emerald-500/90 hover:bg-emerald-500 text-white border-0 rounded-full text-[10px] px-2 py-0.5">
           Active
         </Badge>
