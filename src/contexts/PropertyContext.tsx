@@ -7,6 +7,7 @@ interface Property {
   name: string;
   address: string | null;
   description: string | null;
+  image_url?: string | null;
 }
 
 interface PropertyContextType {

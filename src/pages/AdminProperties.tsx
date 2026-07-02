@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,13 +18,16 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Building2, Edit, Trash2, Loader2, Search, MapPin } from 'lucide-react';
+import { Plus, Building2, Edit, Trash2, Loader2, Search, MapPin, ImagePlus, X } from 'lucide-react';
+import { uploadToExternalStorage } from '@/lib/external-storage';
+import { convertToWebP } from '@/lib/image-utils';
 
 interface Property {
   id: string;
   name: string;
   address: string | null;
   description: string | null;
+  image_url: string | null;
 }
 
 const gradients = [
@@ -43,15 +46,17 @@ const AdminProperties = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [formData, setFormData] = useState({ name: '', address: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', address: '', description: '', image_url: '' });
   const [query, setQuery] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProperties = async () => {
     const { data, error } = await supabase.from('properties').select('*').order('name');
     if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    else setProperties(data || []);
+    else setProperties((data as Property[]) || []);
     setLoading(false);
   };
 
@@ -70,6 +75,23 @@ const AdminProperties = () => {
     );
   }, [properties, query]);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const webp = await convertToWebP(file, 0.85);
+      const url = await uploadToExternalStorage(webp, editingProperty?.id || 'properties');
+      if (!url) throw new Error('Upload gagal');
+      setFormData((f) => ({ ...f, image_url: url }));
+      toast({ title: 'Berhasil', description: 'Gambar diupload' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Upload gagal', variant: 'destructive' });
+    }
+    setUploadingImage(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -77,6 +99,7 @@ const AdminProperties = () => {
       name: formData.name,
       address: formData.address || null,
       description: formData.description || null,
+      image_url: formData.image_url || null,
     };
 
     if (editingProperty) {
@@ -97,7 +120,7 @@ const AdminProperties = () => {
       }
     }
     setSubmitting(false);
-    setFormData({ name: '', address: '', description: '' });
+    setFormData({ name: '', address: '', description: '', image_url: '' });
     setEditingProperty(null);
   };
 
@@ -115,7 +138,12 @@ const AdminProperties = () => {
 
   const openEdit = (p: Property) => {
     setEditingProperty(p);
-    setFormData({ name: p.name, address: p.address || '', description: p.description || '' });
+    setFormData({
+      name: p.name,
+      address: p.address || '',
+      description: p.description || '',
+      image_url: p.image_url || '',
+    });
     setDialogOpen(true);
   };
 
@@ -153,7 +181,7 @@ const AdminProperties = () => {
                 setDialogOpen(o);
                 if (!o) {
                   setEditingProperty(null);
-                  setFormData({ name: '', address: '', description: '' });
+                  setFormData({ name: '', address: '', description: '', image_url: '' });
                 }
               }}
             >
@@ -168,6 +196,51 @@ const AdminProperties = () => {
                   <DialogTitle>{editingProperty ? 'Edit Property' : 'Tambah Property'}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Gambar Property</Label>
+                    {formData.image_url ? (
+                      <div className="relative rounded-xl overflow-hidden border">
+                        <img
+                          src={formData.image_url}
+                          alt="Preview"
+                          className="w-full h-40 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData((f) => ({ ...f, image_url: '' }))}
+                          className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="w-full h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-60"
+                      >
+                        {uploadingImage ? (
+                          <>
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            <span className="text-sm">Mengupload...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ImagePlus className="h-6 w-6" />
+                            <span className="text-sm">Klik untuk upload gambar</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label>Nama *</Label>
                     <Input
@@ -199,7 +272,7 @@ const AdminProperties = () => {
                     >
                       Batal
                     </Button>
-                    <Button type="submit" disabled={submitting} className="flex-1">
+                    <Button type="submit" disabled={submitting || uploadingImage} className="flex-1">
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Simpan'}
                     </Button>
                   </div>
@@ -214,10 +287,7 @@ const AdminProperties = () => {
           <StatCard label="Total Property" value={properties.length} highlight />
           <StatCard label="Ditampilkan" value={filtered.length} />
           <StatCard label="Dengan Alamat" value={properties.filter((p) => !!p.address).length} />
-          <StatCard
-            label="Tanpa Alamat"
-            value={properties.filter((p) => !p.address).length}
-          />
+          <StatCard label="Dengan Gambar" value={properties.filter((p) => !!p.image_url).length} />
         </div>
 
         {/* Grid */}
@@ -250,8 +320,12 @@ const AdminProperties = () => {
                   key={p.id}
                   className="rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-all"
                 >
-                  <div className={`relative h-32 bg-gradient-to-br ${gradient}`}>
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_60%)]" />
+                  <div className={`relative h-40 ${p.image_url ? 'bg-muted' : `bg-gradient-to-br ${gradient}`}`}>
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_60%)]" />
+                    )}
                     <Badge className="absolute top-3 right-3 bg-emerald-500/90 hover:bg-emerald-500 text-white border-0 rounded-full text-[10px] px-2 py-0.5">
                       Active
                     </Badge>
@@ -261,18 +335,18 @@ const AdminProperties = () => {
                   </div>
                   <div className="p-4 pt-8">
                     <h3 className="font-semibold text-lg leading-tight">{p.name}</h3>
-                    {p.address && (
+                    {p.address ? (
                       <p className="text-xs text-muted-foreground mt-2 flex items-start gap-1 line-clamp-2 min-h-[32px]">
                         <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
                         <span>{p.address}</span>
                       </p>
-                    )}
-                    {!p.address && p.description && (
+                    ) : p.description ? (
                       <p className="text-xs text-muted-foreground mt-2 line-clamp-2 min-h-[32px]">
                         {p.description}
                       </p>
+                    ) : (
+                      <div className="min-h-[32px] mt-2" />
                     )}
-                    {!p.address && !p.description && <div className="min-h-[32px] mt-2" />}
 
                     <div className="mt-4 grid grid-cols-2 gap-2 pt-3 border-t">
                       <Button
