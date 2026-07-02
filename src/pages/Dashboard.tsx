@@ -111,6 +111,7 @@ const Dashboard = () => {
                 name={property.name}
                 address={property.address}
                 description={property.description}
+                imageUrl={property.image_url ?? null}
                 onOpen={() => handleSelectProperty(property)}
               />
             ))}
