@@ -177,6 +177,80 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
     head: [finalHeaders],
     body: finalBody,
     theme: 'grid',
+    styles: {
+      fontSize: 7,
+      cellPadding: { top: 4, right: 5, bottom: 4, left: 5 },
+      lineColor: [226, 232, 240],
+      lineWidth: 0.2,
+      textColor: [30, 41, 59],
+      overflow: 'linebreak',
+      valign: 'middle',
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 7,
+      halign: 'left',
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
+    },
+    columnStyles: {
+      ...buildColumnStyles(finalHeaders),
+      ...(hasPhotos ? { [fotoColIndex]: { cellWidth: fotoColWidth, cellPadding: cellPad } } : {}),
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body') {
+        const val = data.cell.raw;
+        if (typeof val === 'string' && val.startsWith('Rp ')) {
+          data.cell.styles.halign = 'right';
+          data.cell.styles.fontStyle = 'bold';
+        }
+        if (hasPhotos && data.column.index === fotoColIndex) {
+          const kode = String(finalBody[data.row.index]?.[kodeIdx] ?? '').trim();
+          const urls = photoByKode.get(kode) ?? [];
+          if (urls.length > 0) {
+            const rows = Math.ceil(urls.length / imagesPerRow);
+            data.cell.styles.minCellHeight = rows * imgSize + (rows - 1) * imgGap + cellPad * 2;
+          }
+        }
+      }
+    },
+    didDrawCell: (data) => {
+      if (!hasPhotos || data.section !== 'body' || data.column.index !== fotoColIndex) return;
+      const kode = String(finalBody[data.row.index]?.[kodeIdx] ?? '').trim();
+      const urls = photoByKode.get(kode) ?? [];
+      if (urls.length === 0) return;
+      const startX = data.cell.x + cellPad;
+      const startY = data.cell.y + cellPad;
+      for (let i = 0; i < urls.length; i++) {
+        const col = i % imagesPerRow;
+        const row = Math.floor(i / imagesPerRow);
+        const x = startX + col * (imgSize + imgGap);
+        const y = startY + row * (imgSize + imgGap);
+        const base64 = photoCache.get(urls[i]) ?? null;
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, y, imgSize, imgSize, 1, 1, 'S');
+        if (base64) {
+          try {
+            doc.addImage(base64, 'JPEG', x + 0.4, y + 0.4, imgSize - 0.8, imgSize - 0.8);
+          } catch {
+            doc.setFontSize(5);
+            doc.setTextColor(148, 163, 184);
+            doc.text('Err', x + imgSize / 2, y + imgSize / 2, { align: 'center' });
+          }
+        } else {
+          doc.setFontSize(5);
+          doc.setTextColor(148, 163, 184);
+          doc.text('N/A', x + imgSize / 2, y + imgSize / 2, { align: 'center' });
+        }
+      }
+    },
+    margin: { left: margin, right: margin },
+  });
+
 
   // ── Footer on every page ──
   const totalPages = (doc as any).internal.getNumberOfPages();
