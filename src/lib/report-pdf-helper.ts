@@ -187,7 +187,6 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
 
     if (itemsWithPhotos.length > 0) {
       doc.addPage();
-      let photoY = 20;
 
       // Section header
       doc.setFillColor(15, 23, 42);
@@ -198,58 +197,90 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text('LAMPIRAN FOTO / EVIDENCE', margin, 20);
-      photoY = 42;
 
-      const imgSize = orientation === 'landscape' ? 45 : 40;
-      const imagesPerRow = orientation === 'landscape' ? 5 : 4;
-      const gap = 6;
+      // One unified table: No | Item | Foto
+      const imgSize = orientation === 'landscape' ? 26 : 24;
+      const gap = 3;
+      const imagesPerRow = orientation === 'landscape' ? 6 : 4;
+      const labelColWidth = orientation === 'landscape' ? 70 : 55;
+      const noColWidth = 10;
+      const photoColWidth = pageWidth - margin * 2 - noColWidth - labelColWidth;
+      const cellPad = 2;
 
-      for (const item of itemsWithPhotos) {
-        // Check space for label + at least 1 row of images
-        if (photoY + 12 + imgSize > pageHeight - 20) {
-          doc.addPage();
-          photoY = 20;
-        }
+      const body = itemsWithPhotos.map((item, idx) => {
+        const rowsCount = Math.ceil(item.urls.length / imagesPerRow);
+        const minH = rowsCount * imgSize + (rowsCount - 1) * gap + cellPad * 2;
+        return {
+          no: String(idx + 1),
+          label: item.label,
+          urls: item.urls,
+          minH,
+        };
+      });
 
-        // Item label
-        doc.setFillColor(241, 245, 249);
-        doc.roundedRect(margin, photoY, pageWidth - margin * 2, 10, 2, 2, 'F');
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text(item.label, margin + 4, photoY + 7);
-        photoY += 14;
-
-        for (let i = 0; i < item.urls.length; i++) {
-          const col = i % imagesPerRow;
-          const x = margin + col * (imgSize + gap);
-
-          if (col === 0 && i > 0) {
-            photoY += imgSize + gap + 4;
+      autoTable(doc, {
+        startY: 42,
+        head: [['No', 'Item', 'Foto']],
+        body: body.map(r => [r.no, r.label, '']),
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: { top: cellPad, right: cellPad, bottom: cellPad, left: cellPad },
+          lineColor: [226, 232, 240],
+          lineWidth: 0.2,
+          textColor: [30, 41, 59],
+          valign: 'middle',
+        },
+        headStyles: {
+          fillColor: [15, 23, 42],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 8,
+          halign: 'left',
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: noColWidth, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: labelColWidth, fontStyle: 'bold' },
+          2: { cellWidth: photoColWidth },
+        },
+        margin: { left: margin, right: margin },
+        didParseCell: (data) => {
+          if (data.section === 'body') {
+            data.cell.styles.minCellHeight = body[data.row.index].minH;
           }
-
-          if (photoY + imgSize > pageHeight - 20) {
-            doc.addPage();
-            photoY = 20;
-          }
-
-          const base64 = photoCache.get(item.urls[i]) ?? null;
-          if (base64) {
+        },
+        didDrawCell: (data) => {
+          if (data.section !== 'body' || data.column.index !== 2) return;
+          const item = body[data.row.index];
+          if (!item) return;
+          const startX = data.cell.x + cellPad;
+          const startY = data.cell.y + cellPad;
+          for (let i = 0; i < item.urls.length; i++) {
+            const col = i % imagesPerRow;
+            const row = Math.floor(i / imagesPerRow);
+            const x = startX + col * (imgSize + gap);
+            const y = startY + row * (imgSize + gap);
+            const base64 = photoCache.get(item.urls[i]) ?? null;
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.3);
-            doc.roundedRect(x, photoY, imgSize, imgSize, 2, 2, 'S');
-            try {
-              doc.addImage(base64, 'JPEG', x + 1, photoY + 1, imgSize - 2, imgSize - 2);
-            } catch {
-              doc.setFontSize(7);
+            doc.roundedRect(x, y, imgSize, imgSize, 1.5, 1.5, 'S');
+            if (base64) {
+              try {
+                doc.addImage(base64, 'JPEG', x + 0.5, y + 0.5, imgSize - 1, imgSize - 1);
+              } catch {
+                doc.setFontSize(6);
+                doc.setTextColor(148, 163, 184);
+                doc.text('Err', x + imgSize / 2, y + imgSize / 2, { align: 'center' });
+              }
+            } else {
+              doc.setFontSize(6);
               doc.setTextColor(148, 163, 184);
-              doc.text('Error', x + imgSize / 2, photoY + imgSize / 2, { align: 'center' });
+              doc.text('N/A', x + imgSize / 2, y + imgSize / 2, { align: 'center' });
             }
           }
-        }
-
-        photoY += imgSize + gap + 8;
-      }
+        },
+      });
     }
   }
 
