@@ -164,11 +164,11 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
   const finalBody = hasPhotos ? body.map(r => [...r, '']) : body;
   const fotoColIndex = finalHeaders.length - 1;
 
-  // Photo cell layout
-  const imgSize = 16;
-  const imgGap = 2;
-  const imagesPerRow = 3;
-  const cellPad = 2;
+  // Photo cell layout — compact grid, aligned to top of cell
+  const imgSize = 13;
+  const imgGap = 1.5;
+  const imagesPerRow = 2;
+  const cellPad = 1.5;
   const fotoColWidth = imagesPerRow * imgSize + (imagesPerRow - 1) * imgGap + cellPad * 2;
 
   // ── Table ──
@@ -179,12 +179,12 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
     theme: 'grid',
     styles: {
       fontSize: 7,
-      cellPadding: { top: 4, right: 5, bottom: 4, left: 5 },
+      cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
       lineColor: [226, 232, 240],
       lineWidth: 0.2,
       textColor: [30, 41, 59],
       overflow: 'linebreak',
-      valign: 'middle',
+      valign: 'top',
     },
     headStyles: {
       fillColor: [15, 23, 42],
@@ -192,13 +192,16 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
       fontStyle: 'bold',
       fontSize: 7,
       halign: 'left',
+      valign: 'middle',
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
     columnStyles: {
       ...buildColumnStyles(finalHeaders),
-      ...(hasPhotos ? { [fotoColIndex]: { cellWidth: fotoColWidth, cellPadding: cellPad } } : {}),
+      ...(hasPhotos
+        ? { [fotoColIndex]: { cellWidth: fotoColWidth, cellPadding: cellPad, halign: 'center' } }
+        : {}),
     },
     didParseCell: (data) => {
       if (data.section === 'body') {
@@ -212,7 +215,8 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
           const urls = photoByKode.get(kode) ?? [];
           if (urls.length > 0) {
             const rows = Math.ceil(urls.length / imagesPerRow);
-            data.cell.styles.minCellHeight = rows * imgSize + (rows - 1) * imgGap + cellPad * 2;
+            data.cell.styles.minCellHeight =
+              rows * imgSize + (rows - 1) * imgGap + cellPad * 2;
           }
         }
       }
@@ -222,8 +226,11 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
       const kode = String(finalBody[data.row.index]?.[kodeIdx] ?? '').trim();
       const urls = photoByKode.get(kode) ?? [];
       if (urls.length === 0) return;
-      const startX = data.cell.x + cellPad;
-      const startY = data.cell.y + cellPad;
+      const rowsCount = Math.ceil(urls.length / imagesPerRow);
+      const gridW = imagesPerRow * imgSize + (imagesPerRow - 1) * imgGap;
+      const gridH = rowsCount * imgSize + (rowsCount - 1) * imgGap;
+      const startX = data.cell.x + (data.cell.width - gridW) / 2;
+      const startY = data.cell.y + (data.cell.height - gridH) / 2;
       for (let i = 0; i < urls.length; i++) {
         const col = i % imagesPerRow;
         const row = Math.floor(i / imagesPerRow);
@@ -231,25 +238,26 @@ export async function generateBrandedReportPdf(options: ReportPdfOptions) {
         const y = startY + row * (imgSize + imgGap);
         const base64 = photoCache.get(urls[i]) ?? null;
         doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(x, y, imgSize, imgSize, 1, 1, 'S');
+        doc.setLineWidth(0.25);
+        doc.roundedRect(x, y, imgSize, imgSize, 0.8, 0.8, 'S');
         if (base64) {
           try {
-            doc.addImage(base64, 'JPEG', x + 0.4, y + 0.4, imgSize - 0.8, imgSize - 0.8);
+            doc.addImage(base64, 'JPEG', x + 0.3, y + 0.3, imgSize - 0.6, imgSize - 0.6);
           } catch {
             doc.setFontSize(5);
             doc.setTextColor(148, 163, 184);
-            doc.text('Err', x + imgSize / 2, y + imgSize / 2, { align: 'center' });
+            doc.text('Err', x + imgSize / 2, y + imgSize / 2 + 0.5, { align: 'center' });
           }
         } else {
           doc.setFontSize(5);
           doc.setTextColor(148, 163, 184);
-          doc.text('N/A', x + imgSize / 2, y + imgSize / 2, { align: 'center' });
+          doc.text('N/A', x + imgSize / 2, y + imgSize / 2 + 0.5, { align: 'center' });
         }
       }
     },
     margin: { left: margin, right: margin },
   });
+
 
 
   // ── Footer on every page ──
